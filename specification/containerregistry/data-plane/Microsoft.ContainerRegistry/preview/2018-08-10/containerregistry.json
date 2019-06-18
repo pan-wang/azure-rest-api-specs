@@ -1,11 +1,30 @@
 {
   "swagger": "2.0",
   "info": {
-    "description": "V2 API definition for the Azure Container Registry runtime",
+    "description": "Metadata API definition for the Azure Container Registry runtime",
     "version": "2018-08-10-preview",
     "title": "Azure Container Registry"
   },
-  "host": "acrapi.azurecr-test.io",
+  "x-ms-parameterized-host": {
+    "hostTemplate": "{url}",
+    "useSchemePrefix": false,
+    "positionInOperation": "first",
+    "parameters": [
+      {
+        "$ref": "#/parameters/url"
+      }
+    ]
+  },
+  "securityDefinitions": {
+    "registry_auth": {
+      "type": "basic"
+    }
+  },
+  "security": [
+    {
+      "registry_auth": []
+    }
+  ],
   "tags": [
     {
       "name": "v2",
@@ -42,11 +61,6 @@
   ],
   "schemes": [
     "https"
-  ],
-  "security": [
-    {
-      "registry_auth": []
-    }
   ],
   "produces": [
     "application/json"
@@ -105,9 +119,6 @@
               "$ref": "#/definitions/RepositoryTags"
             }
           },
-          "404": {
-            "description": "Image doesn't exist"
-          },
           "default": {
             "description": "ACR error response describing why the operation failed.",
             "schema": {
@@ -143,6 +154,13 @@
             "description": "A tag or a digest, pointing to a specific image",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "accept",
+            "in": "header",
+            "description": "Accept header string delimited by comma. For example, application/vnd.docker.distribution.manifest.v2+json",
+            "required": false,
+            "type": "string"
           }
         ],
         "responses": {
@@ -152,8 +170,55 @@
               "$ref": "#/definitions/Manifest"
             }
           },
-          "404": {
-            "description": "Image doesn't exist"
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        }
+      }, 
+      "put": {
+        "tags": [
+          "Manifest"
+        ],
+        "description": "Put the image manifest file associated with the specified name and reference. Reference may be a tag or a digest",
+        "x-ms-examples": {
+          "Put manifest": {
+            "$ref": "./examples/PutManifest.json"
+          }
+        },
+        "consumes": [
+          "application/vnd.docker.distribution.manifest.v2+json"
+        ],
+        "operationId": "PutManifest",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Name of the image (including the namespace)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reference",
+            "in": "path",
+            "description": "A tag or a digest, pointing to a specific image",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "payload",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Manifest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The manifest is updated"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -281,9 +346,6 @@
               "$ref": "#/definitions/RepositoryAttributes"
             }
           },
-          "404": {
-            "description": "Image doesn't exist"
-          },
           "default": {
             "description": "ACR error response describing why the operation failed.",
             "schema": {
@@ -318,9 +380,6 @@
             "schema": {
               "$ref": "#/definitions/DeletedRepository"
             }
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -366,9 +425,6 @@
         "responses": {
           "204": {
             "description": "The attributes is updated"
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -436,9 +492,6 @@
               "$ref": "#/definitions/AcrRepositoryTags"
             }
           },
-          "404": {
-            "description": "Image doesn't exist"
-          },
           "default": {
             "description": "ACR error response describing why the operation failed.",
             "schema": {
@@ -454,10 +507,10 @@
           "AcrTag",
           "AcrMetadata"
         ],
-        "description": "Get manifest attributes by tag",
+        "description": "Get tag attributes by tag",
         "operationId": "GetAcrTagAttributes",
         "x-ms-examples": {
-          "Get manifest attributes": {
+          "Get tag attributes": {
             "$ref": "./examples/GetAcrTagAttributes.json"
           }
         },
@@ -483,9 +536,6 @@
             "schema": {
               "$ref": "#/definitions/AcrTagAttributes"
             }
-          },
-          "404": {
-            "description": "Tag doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -539,9 +589,6 @@
           "204": {
             "description": "The attributes are updated"
           },
-          "404": {
-            "description": "Manifest doesn't exist"
-          },
           "default": {
             "description": "ACR error response describing why the operation failed.",
             "schema": {
@@ -584,9 +631,6 @@
         "responses": {
           "204": {
             "description": "The tag is deleted"
-          },
-          "404": {
-            "description": "Tag doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -647,9 +691,6 @@
               "$ref": "#/definitions/AcrManifests"
             }
           },
-          "404": {
-            "description": "Image doesn't exist"
-          },
           "default": {
             "description": "ACR error response describing why the operation failed.",
             "schema": {
@@ -694,9 +735,6 @@
             "schema": {
               "$ref": "#/definitions/AcrManifestAttributes"
             }
-          },
-          "404": {
-            "description": "Manifest doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -750,9 +788,6 @@
           "204": {
             "description": "The attributes are updated"
           },
-          "404": {
-            "description": "Manifest doesn't exist"
-          },
           "default": {
             "description": "ACR error response describing why the operation failed.",
             "schema": {
@@ -761,11 +796,6 @@
           }
         }
       }
-    }
-  },
-  "securityDefinitions": {
-    "registry_auth": {
-      "type": "basic"
     }
   },
   "definitions": {
@@ -790,11 +820,11 @@
           "description": "Image last update time"
         },
         "manifestCount": {
-          "type": "number",
+          "type": "integer",
           "description": "Number of the manifests"
         },
         "tagCount": {
-          "type": "number",
+          "type": "integer",
           "description": "Number of the tags"
         },
         "changeableAttributes": {
@@ -986,6 +1016,7 @@
           "description": "Image name"
         },
         "manifests": {
+          "x-ms-client-name": "ManifestsAttributes",
           "type": "array",
           "description": "List of manifests",
           "items": {
@@ -1009,8 +1040,10 @@
             },
             "os": "os",
             "digest": "digest",
+            "imageSize": 2401606,
             "createdTime": "createdTime",
             "mediaType": "mediaType",
+            "configMediaType": "configMediaType",
             "lastUpdateTime": "lastUpdateTime",
             "architecture": "architecture",
             "tags": [
@@ -1029,8 +1062,10 @@
             },
             "os": "os",
             "digest": "digest",
+            "imageSize": 2401606,
             "createdTime": "createdTime",
             "mediaType": "mediaType",
+            "configMediaType": "configMediaType",
             "lastUpdateTime": "lastUpdateTime",
             "architecture": "architecture",
             "tags": [
@@ -1053,6 +1088,7 @@
           "type": "string"
         },
         "manifest": {
+          "x-ms-client-name": "ManifestAttributes",
           "description": "Manifest attributes",
           "$ref": "#/definitions/AcrManifestAttributesBase"
         }
@@ -1062,11 +1098,13 @@
         "imageName": "nanoserver",
         "manifest": {
           "digest": "sha256:110d2b6c84592561338aa040b1b14b7ab81c2f9edbd564c2285dd7d70d777086",
+          "imageSize": 2401606,
           "createdTime": "2018-09-06T06:17:20.9983915Z",
           "lastUpdateTime": "2018-09-06T06:17:20.9983915Z",
           "architecture": "amd64",
           "os": "windows",
           "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+          "configMediaType": "application/vnd.docker.container.image.v1+json",
           "tags": [
             "4.7.2-20180905-nanoserver-1803"
           ],
@@ -1087,6 +1125,10 @@
           "type": "string",
           "description": "Manifest digest"
         },
+        "imageSize": {
+          "type": "integer",
+          "description": "Image size"
+        },
         "createdTime": {
           "type": "string",
           "description": "Created time"
@@ -1106,6 +1148,10 @@
         "mediaType": {
           "type": "string",
           "description": "Media type"
+        },
+        "configMediaType": {
+          "type": "string",
+          "description": "Config blob media type"
         },
         "tags": {
           "type": "array",
@@ -1129,8 +1175,10 @@
         },
         "os": "os",
         "digest": "digest",
+        "imageSize": 2401606,
         "createdTime": "createdTime",
         "mediaType": "mediaType",
+        "configMediaType": "configMediaType",
         "lastUpdateTime": "lastUpdateTime",
         "architecture": "architecture",
         "tags": [
@@ -1179,8 +1227,23 @@
       "description": "Returns the requested manifest file",
       "properties": {
         "schemaVersion": {
-          "type": "number",
+          "type": "integer",
           "description": "Schema version"
+        },
+        "mediaType": {
+          "type": "string",
+          "description": "Media type usually application/vnd.docker.distribution.manifest.v2+json if this is in the accept header"
+        },
+        "config": {
+          "description": "V2 image config descriptor",
+          "$ref": "#/definitions/V2Descriptor"
+        },
+        "layers": {
+          "type": "array",
+          "description": "List of V2 image layer information",
+          "items": {
+            "$ref": "#/definitions/V2Descriptor"
+          }
         },
         "architecture": {
           "type": "string",
@@ -1198,15 +1261,14 @@
           "type": "array",
           "description": "List of layer information",
           "items": {
-            "$ref": "#/definitions/ImageLayer"
+            "$ref": "#/definitions/FsLayer"
           }
         },
         "history": {
           "type": "array",
           "description": "Image history",
-          "x-ms-client-name": "ImageHistories",
           "items": {
-            "$ref": "#/definitions/ImageHistory"
+            "$ref": "#/definitions/History"
           }
         },
         "signatures": {
@@ -1218,32 +1280,19 @@
         }
       },
       "example": {
-        "name": "name",
-        "tag": "tag",
-        "fsLayers": [
-          {
-            "blobSum": "sha256:1f7d468f830cb0ed4beb8edc9438f18096e8c682e56a35242f60e6c61b718b30"
-          },
-          {
-            "blobSum": "sha256:2f7d468f830cb0ed4beb8edc9438f18096e8c682e56a35242f60e6c61b718b31"
-          }
-        ],
-        "history": "history",
-        "signatures": [
-          {
-            "header": {
-              "jwk": {
-                "crv": "P-256",
-                "kid": "WGXM:EYWQ:DA53:LQUP:BCWG:5RDG:S3ZM:ETH7:VMQS:WWKZ:EWDG:V74Q",
-                "kty": "EC",
-                "x": "OxZ9k5BVjPZ7jb3BmBD4X0d8MVPJqfF4NeSe8reoqnY",
-                "y": "EaCqTe4-vYwhk7qU6Bs2-AeLGOVtCe_-IY2MdE0Vfyc"
-              },
-              "alg": "ES256"
-            },
-            "signature": "p73LfotMGD8nNXz2g9YX2XtSllb4GI5-b3vjqP5N0nkv8QXg-r5z_omGiVbOZE2BYG1X_4TIN23l1KSEqsXxOg",
-            "protected": "eyJmb3JtYXRMZW5ndGgiOjI5ODYsImZvcm1hdFRhaWwiOiJDbjAiLCJ0aW1lIjoiMjAxOC0wOS0yMFQyMzo0MTo1MloifQ"
-          }
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+        "config": {
+            "mediaType": "application/vnd.docker.container.image.v1+json",
+            "size": 1512,
+            "digest": "sha256:6d1ef012b5674ad8a127ecfa9b5e6f5178d171b90ee462846974177fd9bdd39f"
+        },
+        "layers": [
+            {
+                "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                "size": 2107098,
+                "digest": "sha256:5d20c808ce198565ff70b3ed23a991dd49afac45dece63474b27ce6ed036adc6"
+            }
         ]
       }
     },
@@ -1260,7 +1309,6 @@
         },
         "protected": {
           "type": "string",
-          "x-ms-client-name": "protectedHeader",
           "description": "The signed protected header"
         }
       },
@@ -1316,7 +1364,7 @@
         }
       }
     },
-    "ImageHistory": {
+    "History": {
       "description": "A list of unstructured historical data for v1 compatibility",
       "properties": {
         "v1Compatibility": {
@@ -1383,7 +1431,7 @@
         }
       }
     },
-    "ImageLayer": {
+    "FsLayer": {
       "description": "Image layer information",
       "properties": {
         "blobSum": {
@@ -1393,6 +1441,28 @@
       },
       "example": {
         "blobSum": "sha256:1f7d468f830cb0ed4beb8edc9438f18096e8c682e56a35242f60e6c61b718b30"
+      }
+    },
+    "V2Descriptor": {
+      "description": "Docker V2 image layer descriptor including config and layers",
+      "properties": {
+        "mediaType": {
+          "type": "string",
+          "description": "Layer media type"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Layer size"
+        },
+        "digest": {
+          "type": "string",
+          "description": "Layer digest"
+        }
+      },
+      "example": {
+          "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+          "size": 2107098,
+          "digest": "sha256:5d20c808ce198565ff70b3ed23a991dd49afac45dece63474b27ce6ed036adc6"
       }
     },
     "ChangeableAttributes": {
@@ -1526,6 +1596,16 @@
     }
   },
   "parameters": {
+    "url": {
+      "name": "url",
+      "x-ms-client-name": "loginUri",
+      "description": "Registry login URL",
+      "required": true,
+      "type": "string",
+      "format": "url",
+      "in": "path",
+      "x-ms-skip-url-encoding": true
+    },
     "name": {
       "name": "name",
       "in": "path",
