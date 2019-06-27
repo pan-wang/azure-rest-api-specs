@@ -116,7 +116,7 @@
           "200": {
             "description": "Gives a list of tags for the names repository.",
             "schema": {
-              "$ref": "#/definitions/RepositoryTags"
+              "$ref": "#/definitions/RepositoryTagsPaginated"
             }
           },
           "default": {
@@ -139,6 +139,9 @@
             "$ref": "./examples/GetManifest.json"
           }
         },
+        "consumes": [
+          "application/vnd.docker.distribution.manifest.v2+json"
+        ],
         "operationId": "GetManifest",
         "parameters": [
           {
@@ -182,7 +185,7 @@
         "tags": [
           "Manifest"
         ],
-        "description": "Put the image manifest file associated with the specified name and reference. Reference may be a tag or a digest",
+        "description": "Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
         "x-ms-examples": {
           "Put manifest": {
             "$ref": "./examples/PutManifest.json"
@@ -227,6 +230,48 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Manifest"
+        ],
+        "description": "Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.",
+        "x-ms-examples": {
+          "Delete manifest": {
+            "$ref": "./examples/DeleteManifest.json"
+          }
+        },
+        "consumes": [
+          "application/vnd.docker.distribution.manifest.v2+json"
+        ],
+        "operationId": "DeleteManifest",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Name of the image (including the namespace)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reference",
+            "in": "path",
+            "description": "A tag or a digest, pointing to a specific image",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The manifest has been deleted"
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        }
       }
     },
     "/v2/_catalog": {
@@ -261,7 +306,7 @@
           "200": {
             "description": "Returns a list of repositories",
             "schema": {
-              "$ref": "#/definitions/Repositories"
+              "$ref": "#/definitions/CatalogResponse"
             }
           },
           "default": {
@@ -337,6 +382,22 @@
             "description": "Name of the image (including the namespace)",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "reference",
+            "in": "path",
+            "description": "Tag or digest of the target manifest.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "value",
+            "in": "body",
+            "description": "Body descriptor",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/RepositoryAttributes"
+            }
           }
         ],
         "responses": {
@@ -358,7 +419,7 @@
         "tags": [
           "AcrRepository"
         ],
-        "description": "Delete a repository",
+        "description": "Delete the repository identified by `name`",
         "operationId": "DeleteAcrRepository",
         "x-ms-examples": {
           "Delete a repository": {
@@ -370,6 +431,13 @@
             "name": "name",
             "in": "path",
             "description": "Name of the image (including the namespace)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reference",
+            "in": "path",
+            "description": "Tag or digest of the target manifest.",
             "required": true,
             "type": "string"
           }
@@ -394,7 +462,7 @@
           "AcrRepository",
           "AcrMetadata"
         ],
-        "description": "Update attributes of a repository",
+        "description": "Update the attribute identified by `name` where `reference` is the name of the repository.",
         "operationId": "UpdateAcrRepositoryAttributes",
         "x-ms-examples": {
           "Update repository attributes": {
@@ -413,6 +481,13 @@
             "type": "string"
           },
           {
+            "name": "reference",
+            "in": "path",
+            "description": "Tag or digest of the target manifest.",
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "value",
             "in": "body",
             "description": "Repository attribute value",
@@ -423,7 +498,7 @@
           }
         ],
         "responses": {
-          "204": {
+          "201": {
             "description": "The attributes is updated"
           },
           "default": {
@@ -525,9 +600,18 @@
           {
             "name": "reference",
             "in": "path",
-            "description": "A tag name of the image",
+            "description": "Tag or digest of the target manifest",
             "required": true,
             "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "value",
+            "description": "Tag details of a repository",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/AcrRepositoryTags"
+            }
           }
         ],
         "responses": {
@@ -571,7 +655,7 @@
           {
             "name": "reference",
             "in": "path",
-            "description": "A tag name of the image",
+            "description": "Tag or digest of the target manifest.",
             "required": true,
             "type": "string"
           },
@@ -623,7 +707,7 @@
           {
             "name": "reference",
             "in": "path",
-            "description": "A tag name of the image",
+            "description": "Tag or digest of the target manifest",
             "required": true,
             "type": "string"
           }
@@ -1187,6 +1271,18 @@
         ]
       }
     },
+    "CatalogResponse": {
+      "description": "Catalog response including link",
+      "properties": {
+        "repositories": {
+          "$ref": "#/definitions/Repositories"
+        },
+        "link": {
+          "description": "next paginated result",
+          "type": "string"
+        }
+      }
+    },
     "AcrErrors": {
       "description": "Acr error response describing why the operation failed",
       "properties": {
@@ -1196,6 +1292,18 @@
           "items": {
             "$ref": "#/definitions/AcrErrorInfo"
           }
+        }
+      }
+    },
+    "RepositoryTagsPaginated": {
+      "description": "Tag list including next page link",
+      "properties": {
+        "tags": {
+          "$ref": "#/definitions/RepositoryTags"
+        },
+        "link": {
+          "description": "next paginated result",
+          "type": "string"
         }
       }
     },
