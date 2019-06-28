@@ -299,7 +299,7 @@
             "in": "query",
             "description": "query parameter for max number of items",
             "required": false,
-            "type": "string"
+            "type": "number"
           }
         ],
         "responses": {
@@ -343,7 +343,7 @@
             "in": "query",
             "description": "query parameter for max number of items",
             "required": false,
-            "type": "string"
+            "type": "number"
           }
         ],
         "responses": {
@@ -543,7 +543,7 @@
             "in": "query",
             "description": "query parameter for max number of items",
             "required": false,
-            "type": "string"
+            "type": "number"
           },
           {
             "name": "orderby",
@@ -670,7 +670,7 @@
           }
         ],
         "responses": {
-          "201": {
+          "200": {
             "description": "The attributes are updated"
           },
           "default": {
@@ -758,7 +758,7 @@
             "in": "query",
             "description": "query parameter for max number of items",
             "required": false,
-            "type": "string"
+            "type": "number"
           },
           {
             "name": "orderby",
@@ -869,7 +869,7 @@
           }
         ],
         "responses": {
-          "204": {
+          "201": {
             "description": "The attributes are updated"
           },
           "default": {
@@ -1767,7 +1767,7 @@
       "in": "query",
       "description": "query parameter for max number of items",
       "required": false,
-      "type": "string",
+      "type": "number",
       "x-ms-parameter-location": "method"
     },
     "queryLast": {
