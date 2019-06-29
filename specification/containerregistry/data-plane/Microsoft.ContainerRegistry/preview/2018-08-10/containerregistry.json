@@ -382,22 +382,6 @@
             "description": "Name of the image (including the namespace)",
             "required": true,
             "type": "string"
-          },
-          {
-            "name": "reference",
-            "in": "path",
-            "description": "Tag or digest of the target manifest.",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "value",
-            "in": "body",
-            "description": "Body descriptor",
-            "required": false,
-            "schema": {
-              "$ref": "#/definitions/RepositoryAttributes"
-            }
           }
         ],
         "responses": {
