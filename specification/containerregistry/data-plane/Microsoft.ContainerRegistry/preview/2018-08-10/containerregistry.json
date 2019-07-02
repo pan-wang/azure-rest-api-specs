@@ -31,9 +31,6 @@
       "registry_oauth2": []
     }
   ],
-  "consumes": [
-    "application/x-www-form-urlencoded"
-  ],
   "tags": [
     {
       "name": "v2",
