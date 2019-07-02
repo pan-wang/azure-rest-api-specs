@@ -18,12 +18,21 @@
   "securityDefinitions": {
     "registry_auth": {
       "type": "basic"
+    },
+    "registry_oauth2": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "Authorization"
     }
   },
   "security": [
     {
-      "registry_auth": []
+      "registry_auth": [],
+      "registry_oauth2": []
     }
+  ],
+  "consumes": [
+    "application/x-www-form-urlencoded"
   ],
   "tags": [
     {
@@ -288,18 +297,10 @@
         },
         "parameters": [
           {
-            "name": "last",
-            "in": "query",
-            "description": "Query parameter for the last item in previous query. Result set will include values lexically after last.",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryNum"
           }
         ],
         "responses": {
@@ -332,18 +333,10 @@
         },
         "parameters": [
           {
-            "name": "last",
-            "in": "query",
-            "description": "Query parameter for the last item in previous query. Result set will include values lexically after last.",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryNum"
           }
         ],
         "responses": {
@@ -482,7 +475,7 @@
           }
         ],
         "responses": {
-          "201": {
+          "200": {
             "description": "The attributes is updated"
           },
           "default": {
@@ -516,18 +509,10 @@
             "type": "string"
           },
           {
-            "name": "last",
-            "in": "query",
-            "description": "Query parameter for the last item in previous query. Result set will include values lexically after last.",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryNum"
           },
           {
             "name": "orderby",
@@ -731,18 +716,10 @@
             "type": "string"
           },
           {
-            "name": "last",
-            "in": "query",
-            "description": "Query parameter for the last item in previous query. Result set will include values lexically after last.",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "integer"
+            "$ref": "#/parameters/queryNum"
           },
           {
             "name": "orderby",
@@ -853,8 +830,113 @@
           }
         ],
         "responses": {
-          "201": {
+          "200": {
             "description": "The attributes are updated"
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/exchange": {
+      "post": {
+        "tags": [
+          "AcrToken",
+          "RefreshToken"
+        ],
+        "description": "Exchange AAD tokens for an ACR refresh Token",
+        "operationId": "GetAcrRefreshToken",
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/parameters/Grant_type"
+          },
+          {
+            "$ref": "#/parameters/Service"
+          },
+          {
+            "$ref": "#/parameters/Tenant"
+          },
+          {
+            "$ref": "#/parameters/Refresh_token"
+          },
+          {
+            "$ref": "#/parameters/Access_token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refresh token acquired",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "refresh_token": {
+                  "description": "The refresh token to be used for generating access tokens",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/token": {
+      "post": {
+        "tags": [
+          "AcrToken",
+          "AccessToken"
+        ],
+        "description": "Exchange ACR Refresh token for an ACR Access Token",
+        "operationId": "GetAcrAccessToken",
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/parameters/Grant_type"
+          },
+          {
+            "$ref": "#/parameters/Service"
+          },
+          {
+            "name": "scope",
+            "in": "formData",
+            "required": true,
+            "description": "Which is expected to be a valid scope, and can be specified more than once for multiple scope requests. You obtained this from the Www-Authenticate response header from the challenge.",
+            "type": "string"
+          },
+          {
+            "name": "refresh_token",
+            "in": "formData",
+            "required": true,
+            "description": "Must be a valid ACR refresh token",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access token acquired",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "access_token": {
+                  "description": "The access token for performing authenticated requests",
+                  "type": "string"
+                }
+              }
+            }
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -1518,7 +1600,7 @@
           "description": "Error message"
         },
         "detail": {
-          "type": "string",
+          "type": "object",
           "description": "Error details"
         }
       }
@@ -1759,7 +1841,7 @@
       "in": "query",
       "description": "Query parameter for the last item in previous query. Result set will include values lexically after last.",
       "required": false,
-      "type": "integer",
+      "type": "string",
       "x-ms-parameter-location": "method"
     },
     "queryDigest": {
@@ -1767,6 +1849,51 @@
       "in": "query",
       "description": "filter by digest",
       "required": false,
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Grant_type": {
+      "name": "grant_type",
+      "description": "Can take a value of access_token_refresh_token, or access_token, or refresh_token",
+      "type": "string",
+      "in": "formData",
+      "required": true,
+      "enum": [
+        "access_token_refresh_token",
+        "access_token",
+        "refresh_token"
+      ],
+      "x-ms-parameter-location": "method"
+    },
+    "Service": {
+      "name": "service",
+      "in": "formData",
+      "required": true,
+      "description": "Indicates the name of your Azure container registry.",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Tenant": {
+      "name": "tenant",
+      "in": "formData",
+      "required": true,
+      "description": "AAD tenant associated to the AAD credentials.",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Refresh_token": {
+      "name": "refresh_token",
+      "in": "formData",
+      "required": false,
+      "description": "AAD refresh token, mandatory when grant_type is access_token_refresh_token or refresh_token",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Access_token": {
+      "name": "access_token",
+      "in": "formData",
+      "required": false,
+      "description": "AAD access token, mandatory when grant_type is access_token_refresh_token or access_token.",
       "type": "string",
       "x-ms-parameter-location": "method"
     }
