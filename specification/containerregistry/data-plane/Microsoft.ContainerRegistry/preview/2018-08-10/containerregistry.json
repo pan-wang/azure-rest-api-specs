@@ -121,8 +121,14 @@
         "responses": {
           "200": {
             "description": "Gives a list of tags for the names repository.",
+            "headers": {
+              "Link": {
+                "description": "next paginated result",
+                "type": "string"
+              }
+            },
             "schema": {
-              "$ref": "#/definitions/RepositoryTagsPaginated"
+              "$ref": "#/definitions/RepositoryTags"
             }
           },
           "default": {
@@ -303,8 +309,14 @@
         "responses": {
           "200": {
             "description": "Returns a list of repositories",
+            "headers": {
+              "Link": {
+                "description": "next paginated result",
+                "type": "string"
+              }
+            },
             "schema": {
-              "$ref": "#/definitions/CatalogResponse"
+              "$ref": "#/definitions/Repositories"
             }
           },
           "default": {
@@ -886,7 +898,8 @@
               "$ref": "#/definitions/AcrErrors"
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/oauth2/token": {
@@ -941,7 +954,8 @@
               "$ref": "#/definitions/AcrErrors"
             }
           }
-        }
+        },
+        "security": []
       }
     }
   },
@@ -1334,18 +1348,6 @@
         ]
       }
     },
-    "CatalogResponse": {
-      "description": "Catalog response including link",
-      "properties": {
-        "repositories": {
-          "$ref": "#/definitions/Repositories"
-        },
-        "link": {
-          "description": "next paginated result",
-          "type": "string"
-        }
-      }
-    },
     "AcrErrors": {
       "description": "Acr error response describing why the operation failed",
       "properties": {
@@ -1355,18 +1357,6 @@
           "items": {
             "$ref": "#/definitions/AcrErrorInfo"
           }
-        }
-      }
-    },
-    "RepositoryTagsPaginated": {
-      "description": "Tag list including next page link",
-      "properties": {
-        "tags": {
-          "$ref": "#/definitions/RepositoryTags"
-        },
-        "link": {
-          "description": "next paginated result",
-          "type": "string"
         }
       }
     },
