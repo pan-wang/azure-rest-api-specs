@@ -915,7 +915,14 @@
         ],
         "parameters": [
           {
-            "$ref": "#/parameters/Grant_type"
+            "name": "grant_type",
+            "in": "formData",
+            "description": "Grant type is expected to be refresh_token",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "refresh_token"
+            ]
           },
           {
             "$ref": "#/parameters/Service"
@@ -956,6 +963,48 @@
           }
         },
         "security": []
+      },
+      "get": {
+        "tags": [
+          "AcrToken",
+          "AccessToken",
+          "userLogin"
+        ],
+        "description": "Exchange Username, Password and Scope an ACR Access Token",
+        "operationId": "GetAcrAccessTokenFromLogin",
+        "parameters": [
+          {
+            "$ref": "#/parameters/Service"
+          },
+          {
+            "$ref": "#/parameters/Scope"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access token acquired",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "access_token": {
+                  "description": "The access token for performing authenticated requests",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        },
+        "security": [
+          {
+            "registry_auth": []
+          }
+        ]
       }
     }
   },
@@ -1863,8 +1912,16 @@
     "Tenant": {
       "name": "tenant",
       "in": "formData",
-      "required": true,
+      "required": false,
       "description": "AAD tenant associated to the AAD credentials.",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Scope": {
+      "name": "scope",
+      "in": "formData",
+      "required": true,
+      "description": "Which is expected to be a valid scope, and can be specified more than once for multiple scope requests. You can obtain this from the Www-Authenticate response header from the challenge.",
       "type": "string",
       "x-ms-parameter-location": "method"
     },
