@@ -11,34 +11,45 @@ using Microsoft.Rest;
 using Microsoft.Rest.Serialization;
 using Microsoft.Azure.ContainerRegistry.Models;
 using System.Diagnostics;
+using System.IO;
+using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 
 namespace testsdk
 {
     class Program
     {
+
+        const int FETCH_COUNT_MANIFEST = 5;
+        const int FETCH_COUNT_TAGS = 5;
+
         static void Main(string[] args)
         {
-            string username = "cSharpSdkTest";
+            string username = "";
             string password = "";
             string loginUrl = "csharpsdktest.azurecr.io";
-            int timeoutInMilliseconds = 15000;
+            int timeoutInMilliseconds = 1500000;
             CancellationToken ct = new CancellationTokenSource(timeoutInMilliseconds).Token;
-            AcrClientCredentials clientCredential = new AcrClientCredentials(true,
+            AcrClientCredentials clientCredential = new AcrClientCredentials(AcrClientCredentials.LoginMode.TokenAuth,
                 loginUrl,
                 username,
                 password,
                 ct);
+
             AzureContainerRegistryClient client = new AzureContainerRegistryClient(clientCredential);
+
             client.LoginUri = "https://csharpsdktest.azurecr.io";
             try
             {
+                Console.WriteLine("################################################################### ACR V1 enpoint API ###################################################################");
                 testACRV1(clientCredential, client, ct);
+                Console.WriteLine("################################################################### ACR V2 enpoint API ###################################################################");
                 testACR2(clientCredential, client, ct);
 
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception caught: " + e.Message);
+                Console.WriteLine("Exception caught: " + e);
             }
         }
 
@@ -66,69 +77,120 @@ namespace testsdk
         private static void testACRV1(AcrClientCredentials clientCredential, AzureContainerRegistryClient client, CancellationToken ct)
         {
             // ------------------------ Acr V1 Get Repositories ------------------------  (1)
-            Repositories repositories = client.GetAcrRepositoriesAsync(null, "", ct).GetAwaiter().GetResult();
+            Repositories repositories = client.GetAcrRepositoriesAsync(null, 20, ct).GetAwaiter().GetResult();
             Console.WriteLine("GET /acr/v1/_catalog result");
-            Console.WriteLine(SafeJsonConvert.SerializeObject(repositories, client.SerializationSettings));
+            //Console.WriteLine(SafeJsonConvert.SerializeObject(repositories, client.SerializationSettings));
+
             foreach (string repository in repositories.Names)
             {
                 // ------------------------ Acr V1 Get Repository Attributes ------------------------  (2)
-                RepositoryAttributes repositoryAttributes = client.GetAcrRepositoryAttributesAsync(repository, ct).GetAwaiter().GetResult();
+                RepositoryAttributes repositoryAttributes;
                 Console.WriteLine("GET /acr/v1/{0} result", repository);
-                Console.WriteLine(SafeJsonConvert.SerializeObject(repositoryAttributes, client.SerializationSettings));
+                //Console.WriteLine(SafeJsonConvert.SerializeObject(repositoryAttributes, client.SerializationSettings));
+                AcrRepositoryTags tags_in;
 
-                // ------------------------ Acr V1 Get Repository Tags ------------------------  (5)
-                AcrRepositoryTags tags_in = client.GetAcrTagsAsync(repository,
-                    null,
-                    null,
-                    null,
-                    null,
-                    ct).GetAwaiter().GetResult();
-                Console.WriteLine("GET /acr/v1/{0}/_tags result", repository);
-                Console.WriteLine(SafeJsonConvert.SerializeObject(tags_in, client.SerializationSettings));
+                try
+                {
+                    repositoryAttributes = client.GetAcrRepositoryAttributesAsync(repository, ct).GetAwaiter().GetResult();
+                    // ------------------------ Acr V1 Get Repository Tags ------------------------  (5)
+                    Console.WriteLine("GET /acr/v1/{0}/_tags result", repository);
+                    tags_in = client.GetAcrTagsAsync(repository,
+                        null,
+                        FETCH_COUNT_TAGS,
+                        null,
+                        null,
+                        ct).GetAwaiter().GetResult();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    continue;
+                }
+                //Console.WriteLine(SafeJsonConvert.SerializeObject(tags_in, client.SerializationSettings));
                 foreach (AcrTagAttributesBase tag in tags_in.TagsAttributes)
                 {
                     // ------------------------ Acr V1 Get Tag Attributes ------------------------ ?
-                    AcrTagAttributes tagAttribute = client.GetAcrTagAttributesAsync(repository,
-                        tag.Name,
-                        ct).GetAwaiter().GetResult();
                     Console.WriteLine("GET /acr/v1/{0}/_tags/{1} result", repository, tag.Name);
-                    Console.WriteLine(SafeJsonConvert.SerializeObject(tagAttribute, client.SerializationSettings));
+                    AcrTagAttributes tagAttribute;
+                    try
+                    {
+                        tagAttribute = client.GetAcrTagAttributesAsync(repository,
+                        tag.Name, null,
+                        ct).GetAwaiter().GetResult();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        Console.WriteLine("{0} {1}", tag.Name, repository);
+                        continue;
+                    }
+
+                    //Console.WriteLine(SafeJsonConvert.SerializeObject(tagAttribute, client.SerializationSettings));
                 }
 
                 // ------------------------ Acr V1 Get Repository Manifests ------------------------ (6)
                 AcrManifests manifests = client.GetAcrManifestsAsync(repository,
                     null,
-                    null,
+                    FETCH_COUNT_MANIFEST,
                     null,
                     ct).GetAwaiter().GetResult();
                 Console.WriteLine("GET /acr/v1/{0}/_manifests result", repository);
-                Console.WriteLine(SafeJsonConvert.SerializeObject(manifests, client.SerializationSettings));
+                //Console.WriteLine(SafeJsonConvert.SerializeObject(manifests, client.SerializationSettings));
                 foreach (AcrManifestAttributesBase manifest in manifests.ManifestsAttributes)
                 {
+                    Console.WriteLine("GET /acr/v1/{0}/_manifests/{1} result", repository, manifest.Digest);
+                    AcrManifestAttributes manifestAttribute = null;
                     // ------------------------ Acr V1 Get Manifest Attributes ------------------------  (7)
-                    AcrManifestAttributes manifestAttribute = client.GetAcrManifestAttributesAsync(repository,
+                    try
+                    {
+                        manifestAttribute = client.GetAcrManifestAttributesAsync(repository,
                         manifest.Digest,
                         ct).GetAwaiter().GetResult();
-                    Console.WriteLine("GET /acr/v1/{0}/_manifests/{1} result", repository, manifest.Digest);
-                    Console.WriteLine(SafeJsonConvert.SerializeObject(manifestAttribute, client.SerializationSettings));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
+                    }
                 }
             }
+            // ------------------------ Acr V1 Patch Tag ------------------------  (3)
+            Console.WriteLine("PATCH /acr/v1/{name}/_tags/{reference}");
+            AcrRepositoryTags tags = client.GetAcrTagsAsync(repositories.Names[0]).GetAwaiter().GetResult();
+            // Need to enables delete in case it was disabled in preparation for delete
+            ChangeableAttributes changed = new ChangeableAttributes(true, true, true, !tags.TagsAttributes[0].ChangeableAttributes.ReadEnabled);
+            client.UpdateAcrTagAttributesAsync(tags.ImageName, tags.TagsAttributes[0].Name, changed, ct).GetAwaiter().GetResult();
+            AcrRepositoryTags tagsPostPatch = client.GetAcrTagsAsync(repositories.Names[0], null, null, null, tags.TagsAttributes[0].Digest).GetAwaiter().GetResult();
+            //Console.WriteLine(SafeJsonConvert.SerializeObject(tagsPostPatch, client.SerializationSettings));
+            Debug.Assert(tagsPostPatch.TagsAttributes[0].ChangeableAttributes == changed);
 
 
             // ------------------------ Acr V1 Delete Tag ------------------------  (4)
             Console.WriteLine("DELETE /acr/v1/{name}/_tags/{reference}");
-            AcrRepositoryTags tags = client.GetAcrTagsAsync(repositories.Names[0]).GetAwaiter().GetResult();
-            Console.WriteLine(SafeJsonConvert.SerializeObject(tags, client.SerializationSettings));
-            Console.WriteLine("---------------Delete Called ---------------");
+            //Console.WriteLine(SafeJsonConvert.SerializeObject(tags, client.SerializationSettings));
             client.DeleteAcrTagAsync(tags.ImageName, tags.TagsAttributes[0].Name).GetAwaiter().GetResult();
-            AcrRepositoryTags tagsPost = client.GetAcrTagsAsync(repositories.Names[0]).GetAwaiter().GetResult();
-            Console.WriteLine(SafeJsonConvert.SerializeObject(tagsPost, client.SerializationSettings));
-            Debug.Assert(!tagsPost.TagsAttributes.Contains(tags.TagsAttributes[0]));
-
-            // ------------------------ Acr V1 Patch Tag ------------------------  (3)
+            AcrRepositoryTags tagsPostDelete = client.GetAcrTagsAsync(repositories.Names[0]).GetAwaiter().GetResult();
+            //Console.WriteLine(SafeJsonConvert.SerializeObject(tagsPostDelete, client.SerializationSettings));
+            Debug.Assert(!tagsPostDelete.TagsAttributes.Contains(tags.TagsAttributes[0]));
+            Console.WriteLine("Succesfully deleted {0}/{1}", tags.ImageName, tags.TagsAttributes[0]);
 
 
             // ------------------------ Acr V1 Patch Manifest ------------------------  (8)
+            AcrManifests newManifests = client.GetAcrManifestsAsync(repositories.Names[0],
+                null,
+                null,
+                null,
+                ct).GetAwaiter().GetResult();
+
+            Console.WriteLine("PATCH /acr/v1/{0}/_manifests/{1} result", repositories.Names[0], newManifests.ManifestsAttributes[0].Digest);
+            ChangeableAttributes changed2 = new ChangeableAttributes(true, !newManifests.ManifestsAttributes[0].ChangeableAttributes.ListEnabled, true, !newManifests.ManifestsAttributes[0].ChangeableAttributes.ReadEnabled);
+            client.UpdateAcrManifestAttributesAsync(newManifests.ImageName, newManifests.ManifestsAttributes[0].Digest, changed2).GetAwaiter().GetResult();
+            AcrManifests manifestsPostPatch = client.GetAcrManifestsAsync(repositories.Names[0],
+                null,
+                null,
+                null,
+                ct).GetAwaiter().GetResult();
+            Debug.Assert(manifestsPostPatch.ManifestsAttributes[0].ChangeableAttributes == changed2);
 
 
         }
@@ -157,20 +219,20 @@ namespace testsdk
         {
 
             // ------------------------ Docker V2 Get Repositories ------------------------  (1)
-            Repositories repositories = client.GetRepositoriesAsync(null,
+            Repositories catalogResponse = client.GetRepositoriesAsync(null,
                 null,
                 ct).GetAwaiter().GetResult();
             Console.WriteLine("GET /v2/_catalog result");
-            Console.WriteLine(SafeJsonConvert.SerializeObject(repositories, client.SerializationSettings));
-            foreach (string repository in repositories.Names)
+            //Console.WriteLine(SafeJsonConvert.SerializeObject(repositories, client.SerializationSettings));
+            foreach (string repository in catalogResponse.Names)
             {
                 // ------------------------ Docker V2 Get Tags ------------------------  (2)
-                RepositoryTags repositoryTags = client.GetTagListAsync(repository,
+                RepositoryTags repositoryTagsPaginated = client.GetTagListAsync(repository,
                     ct).GetAwaiter().GetResult();
                 Console.WriteLine("GET /v2/{0}/tags/list result", repository);
-                Console.WriteLine(SafeJsonConvert.SerializeObject(repositoryTags, client.SerializationSettings));
+                //Console.WriteLine(SafeJsonConvert.SerializeObject(repositoryTags, client.SerializationSettings));
 
-                foreach (string tag in repositoryTags.Tags)
+                foreach (string tag in repositoryTagsPaginated.Tags)
                 {
                     // ------------------------ Docker V2 Get Manifest ------------------------  (3)
                     Manifest manifest = client.GetManifestAsync(repository,
@@ -178,7 +240,7 @@ namespace testsdk
                         "application/vnd.docker.distribution.manifest.v2+json", // most of docker images are v2 docker images now. The accept header should include "application/vnd.docker.distribution.manifest.v2+json"
                         ct).GetAwaiter().GetResult();
                     Console.WriteLine("GET /v2/{0}/manifests/{1} result", repository, tag);
-                    Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
+                    //Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
 
                     // ------------------------ Docker V2 Update Manifest ------------------------  (4)
                     // Use the same manifest to update the manifest
@@ -195,7 +257,7 @@ namespace testsdk
                         manifest,
                         ct).GetAwaiter().GetResult();
                     Console.WriteLine("PUT /v2/{0}/manifests/{1} result. reference by tag", repository, tag);
-                    Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
+                    //Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
 
                     // 2. Reference by digest
                     string manifestString = SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings);
@@ -205,7 +267,7 @@ namespace testsdk
                         manifest,
                         ct).GetAwaiter().GetResult();
                     Console.WriteLine("PUT /v2/{0}/manifests/{1} result. reference by digest", repository, digest);
-                    Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
+                    //Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
                 }
             }
         }
@@ -229,52 +291,151 @@ namespace testsdk
 
     public class AcrClientCredentials : ServiceClientCredentials
     {
-        private string AuthHeader { get; set; }
-        private bool BasicMode { get; set; }
+        Microsoft.Azure.ContainerRegistry.AzureContainerRegistryClient authClient;
 
+        private class TokenCredentials : ServiceClientCredentials
+        {
+            private string AuthHeader {get; set;}
+
+            /*To be used for General Login Scheme*/
+            public TokenCredentials(string username, string password)
+            {
+                AuthHeader = EncodeTo64(username + ":" + password);
+            }
+            /*To be used for exchanging AAD Tokens for ACR Tokens*/
+            public TokenCredentials()
+            {
+                AuthHeader = null;
+            }
+            public override async Task ProcessHttpRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                if (request == null)
+                {
+                    throw new ArgumentNullException("request");
+                }
+                if (AuthHeader != null)
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Basic", AuthHeader);
+                }
+                await base.ProcessHttpRequestAsync(request, cancellationToken);
+            }
+        }
+        struct Token
+        {
+            public string token { get; set; }
+            public DateTime Expiration { get; set; }
+        }
+
+        public enum LoginMode
+        {
+            Basic,
+            TokenAuth,
+            TokenAad
+        }
+
+
+        private string AuthHeader { get; set; }
+        private LoginMode Mode { get; set; }
         private string LoginUrl { get; set; }
         private string Username { get; set; }
         private string Password { get; set; }
+        private String Tenant { get; set; }
+
+        private Token AcrRefresh;
+        private Token AcrAccess;
+        private Token AadAccess;
+
+        // <Scope> <Token>
+        private Dictionary<string, string> AcrAccessTokens;
+
+        // Need to somehow prefill this
+        //{GET}v2/_catalog : registry:catalog:*
+        //{GET}v2/{name}/_tags/list : repository:{name}:pull
+        //
+
+        // <Operation> <Scope>
+        private Dictionary<string, string> AcrScopes;
+
         private CancellationToken RequestCancellationToken { get; set; }
 
-        public AcrClientCredentials(bool basicMode, string loginUrl, string username, string password, CancellationToken cancellationToken = default(CancellationToken))
+        public AcrClientCredentials(LoginMode mode, string loginUrl, string username, string password, CancellationToken cancellationToken = default(CancellationToken))
         {
-            BasicMode = basicMode;
+            Mode = mode;
+            if (Mode == LoginMode.TokenAad)
+            {
+                throw new Exception("AAD token authorization requires you to provide the AAD_access_token");
+            }
             LoginUrl = loginUrl;
             Username = username;
             Password = password;
             RequestCancellationToken = cancellationToken;
+            commonInit();
         }
 
-        public override void InitializeServiceClient<T>(ServiceClient<T> client)
+        public AcrClientCredentials(string AAD_access_token, string loginUrl, string tenant = null, string LoginUri = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (!BasicMode)
-            {
-                // For bear mode
-                // Step 1: get challenge response from /v2/ API. THe response Www-Authenticate header is token server URL.
-                string challegeUrl = (LoginUrl.StartsWith("https://") ? "" : "https://") + LoginUrl + (LoginUrl.EndsWith("/") ? "" : "/") + "v2/";
-                HttpClient runtimeClient = new HttpClient();
-                HttpResponseMessage response = null;
-                string tokenServerUrl = "";
-                try
-                {
-                    response = runtimeClient.GetAsync(challegeUrl, RequestCancellationToken).GetAwaiter().GetResult();
-                    tokenServerUrl = response.Headers.GetValues("Www-Authenticate").FirstOrDefault();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("v2 call throws exception {0}", e.Message);
-                }
+            Mode = LoginMode.TokenAad;
+            LoginUrl = loginUrl;
+            RequestCancellationToken = cancellationToken;
+            AadAccess.token = AAD_access_token;
+            Tenant = tenant;
+            commonInit();
+        }
 
-                if (!String.IsNullOrEmpty(tokenServerUrl))
-                {
-                    // Step 2: present username and password to token server to get access token
-                    // TODO: Call token server to get access token
-                    return;
-                }
+        private void commonInit() {
+            AcrScopes = new Dictionary<string, string>();
+            AcrAccessTokens = new Dictionary<string, string>();
+        }
+
+        public override void InitializeServiceClient<AzureContainerRegistryClient>(ServiceClient<AzureContainerRegistryClient> client)
+        {
+            if (Mode == LoginMode.Basic)
+            {
+                AuthHeader = EncodeTo64(Username + ":" + Password);
+                return;
             }
 
-            AuthHeader = EncodeTo64(Username + ":" + Password);
+            // For Bearer modes
+
+            // Step 1: get challenge response from /v2/ API. THe response Www-Authenticate header is token server URL.
+            string challegeUrl = (LoginUrl.StartsWith("https://") ? "" : "https://") + LoginUrl + (LoginUrl.EndsWith("/") ? "" : "/") + "v2/";
+            HttpClient runtimeClient = new HttpClient();
+            HttpResponseMessage response = null;
+            string tokenServerUrl = "";
+            try
+            {
+                response = runtimeClient.GetAsync(challegeUrl, RequestCancellationToken).GetAwaiter().GetResult();
+                tokenServerUrl = response.Headers.GetValues("Www-Authenticate").FirstOrDefault();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("v2 call throws exception {0}", e.Message);
+            }
+
+            if (!String.IsNullOrEmpty(tokenServerUrl))
+            {
+                //AcrRefresh.token = noCredentialClient.GetAcrRefreshTokenAsync("access_token", this.LoginUrl, Tenant, null, AadAccess.token).GetAwaiter().GetResult().RefreshToken;
+                
+            }
+            else
+            {
+                throw new Exception("Could not find Authentication endpoint for this registry");
+            }
+
+            if (Mode == LoginMode.TokenAuth) // From Credentials
+            { 
+                authClient = new Microsoft.Azure.ContainerRegistry.AzureContainerRegistryClient(new TokenCredentials());
+                authClient.LoginUri = tokenServerUrl;
+            }
+            else // From AAD Access Token
+            { 
+                authClient = new Microsoft.Azure.ContainerRegistry.AzureContainerRegistryClient(new TokenCredentials());
+                authClient.LoginUri = tokenServerUrl;
+                AcrRefresh.token = authClient.GetAcrRefreshTokenAsync("access_token", this.LoginUrl, Tenant, null, AadAccess.token).GetAwaiter().GetResult().RefreshToken;
+            }
+
+
+
         }
         public override async Task ProcessHttpRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -283,24 +444,69 @@ namespace testsdk
                 throw new ArgumentNullException("request");
             }
 
-            if (AuthHeader == null)
-            {
-                throw new InvalidOperationException("Token Provider Cannot Be Null");
-            }
-
-            if (BasicMode)
+            if (Mode == LoginMode.Basic)
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Basic", AuthHeader);
             }
             else
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bear", AuthHeader);
+                string operation = "https://" + LoginUrl +  request.RequestUri.AbsolutePath;
+                string scope = getScope(operation, request.Method.Method);
+                request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + getAcrAccessToken(scope));
             }
             //request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            Print(request);
+            //Print(request);
             //request.Version = new Version(apiVersion);
             await base.ProcessHttpRequestAsync(request, cancellationToken);
+
+        }
+
+        public string getAcrAccessToken(string scope)
+        {
+
+            if (AcrAccessTokens.ContainsKey(scope))
+            {
+                return AcrAccessTokens[scope];
+            }
+            else if (Mode == LoginMode.TokenAad)
+            {
+                string acrAccess = authClient.GetAcrAccessTokenAsync(this.LoginUrl, scope, AcrRefresh.token).GetAwaiter().GetResult().AccessToken;
+                AcrAccessTokens[scope] = acrAccess;
+            }
+            else if (Mode == LoginMode.TokenAuth)
+            {
+                string acrAccess = authClient.GetAcrAccessTokenFromLoginAsync(this.LoginUrl, scope).GetAwaiter().GetResult().AccessToken;
+                AcrAccessTokens[scope] = acrAccess;
+            }
+            else
+            {
+                throw new Exception("This Function cannot be invoked for requested Login Mode ");
+            }
+
+            return AcrAccessTokens[scope];
+        }
+
+        public string getScope(string operation, string method) {
+
+            if (AcrScopes.ContainsKey(operation)) {
+                return AcrScopes[operation];
+            }
+
+            HttpClient runtimeClient = new HttpClient();
+            HttpResponseMessage response = null;
+            string scope = "";
+            try
+            {
+                response = runtimeClient.SendAsync(new HttpRequestMessage(new HttpMethod (method), operation)).GetAwaiter().GetResult();
+                scope = response.Headers.GetValues("Www-Authenticate").Last();
+                AcrScopes[operation] = scope;
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Could not identify appropiate Token scope: " + e.Message);
+            }
+            return scope;
 
         }
 
