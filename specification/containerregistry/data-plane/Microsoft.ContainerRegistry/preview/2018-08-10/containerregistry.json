@@ -974,10 +974,18 @@
         "operationId": "GetAcrAccessTokenFromLogin",
         "parameters": [
           {
-            "$ref": "#/parameters/Service"
+            "name": "service",
+            "in": "query",
+            "required": true,
+            "description": "Indicates the name of your Azure container registry.",
+            "type": "string"
           },
           {
-            "$ref": "#/parameters/Scope"
+            "name": "scope",
+            "in": "query",
+            "required": true,
+            "description": "Expected to be a valid scope, and can be specified more than once for multiple scope requests. You can obtain this from the Www-Authenticate response header from the challenge.",
+            "type": "string"
           }
         ],
         "responses": {
