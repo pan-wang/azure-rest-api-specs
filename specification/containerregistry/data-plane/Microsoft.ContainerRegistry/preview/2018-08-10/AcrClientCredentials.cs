@@ -45,7 +45,7 @@ namespace Microsoft.Azure.ContainerRegistry
             }
         }
 
-        struct Token
+        public struct Token
         {
             public string token { get; set; }
             public DateTime Expiration { get; set; }
@@ -57,6 +57,14 @@ namespace Microsoft.Azure.ContainerRegistry
             TokenAuth,
             TokenAad
         }
+
+        // Technically 60, but set at 55 for safety
+        public const double ACCESS_TOKEN_EXPIRATION_MIN = 55;
+
+        // Technically 3 hrs but set at 2hrs 55min for safety
+        public const double REFRESH_TOKEN_EXPIRATION_MIN = 175;
+
+        public delegate Token AADAcquireCallback();
         #endregion
 
         #region Instance Variables        
@@ -66,19 +74,20 @@ namespace Microsoft.Azure.ContainerRegistry
         private string Username { get; set; }
         private string Password { get; set; }
         private String Tenant { get; set; }
-        private string AadAccess { get; set; }
         private CancellationToken RequestCancellationToken { get; set; }
 
         // Structure : Scope : Token
-        private Dictionary<string, string> AcrAccessTokens;
+        private Dictionary<string, Token> AcrAccessTokens;
 
         // Structure : Method>Operation : Scope
         private Dictionary<string, string> AcrScopes;
 
         // Internal simplified client for Token Acquisition
         private Microsoft.Azure.ContainerRegistry.AzureContainerRegistryClient authClient;
-
+        private AADAcquireCallback acquireNewAADToken;
         private Token AcrRefresh;
+        private Token AadAccess;
+
         #endregion
 
         #region Constructors
@@ -102,20 +111,23 @@ namespace Microsoft.Azure.ContainerRegistry
         /*Constructor for use when providing an aad access token to be exchanged for an acr refresh token. Note that token expiration will require manually
          providing new aad tokens. This model assumes the client is able to do this authentication themselves for AAD tokens. A callback can be provided to 
          be executed once the ACR refresh token expires and can no longer be renewed as the provided Aad Token has expired.*/
-        public AcrClientCredentials(string AAD_access_token, string loginUrl, string tenant = null, string LoginUri = null, CancellationToken cancellationToken = default(CancellationToken),  Delegate callback = null)
+        public AcrClientCredentials(string AAD_access_token, string loginUrl, string tenant = null, string LoginUri = null, CancellationToken cancellationToken = default(CancellationToken), AADAcquireCallback callback = null)
         {
             Mode = LoginMode.TokenAad;
             LoginUrl = loginUrl;
             RequestCancellationToken = cancellationToken;
-            AadAccess = AAD_access_token;
+            AadAccess = new Token();
+            AadAccess.token = AAD_access_token;
+            AadAccess.Expiration = DateTime.UtcNow.AddMinutes(ACCESS_TOKEN_EXPIRATION_MIN);
             Tenant = tenant;
+            acquireNewAADToken = callback;
             commonInit();
         }
 
         private void commonInit()
         {
             AcrScopes = new Dictionary<string, string>();
-            AcrAccessTokens = new Dictionary<string, string>();
+            AcrAccessTokens = new Dictionary<string, Token>();
         }
         #endregion
 
@@ -137,10 +149,12 @@ namespace Microsoft.Azure.ContainerRegistry
             {
                 authClient = new Microsoft.Azure.ContainerRegistry.AzureContainerRegistryClient(new TokenCredentials());
                 authClient.LoginUri = "https://" + LoginUrl;
-                AcrRefresh.token = authClient.GetAcrRefreshTokenAsync("access_token", this.LoginUrl, Tenant, null, AadAccess).GetAwaiter().GetResult().RefreshToken;
+                AcrRefresh.token = authClient.GetAcrRefreshTokenAsync("access_token", this.LoginUrl, Tenant, null, AadAccess.token).GetAwaiter().GetResult().RefreshToken;
+                AcrRefresh.Expiration = DateTime.UtcNow.AddMinutes(REFRESH_TOKEN_EXPIRATION_MIN);
+
             }
         }
-        
+
         /*Handles all requests of the SDK providing the required authentication along the way.*/
         public override async Task ProcessHttpRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -186,26 +200,59 @@ namespace Microsoft.Azure.ContainerRegistry
                 throw new Exception("This Function cannot be invoked for requested Login Mode. Basic Authentication does not support JWT Tokens ");
             }
 
-            if (AcrAccessTokens.ContainsKey(scope))
+            // If Token is available and unexpired
+            if (AcrAccessTokens.ContainsKey(scope) && AcrAccessTokens[scope].Expiration > DateTime.UtcNow)
             {
-                return AcrAccessTokens[scope];
+                return AcrAccessTokens[scope].token;
             }
 
             if (Mode == LoginMode.TokenAad)
             {
+                validateOrUpdateRefreshToken(); // Validates that refresh token is still valid
                 string acrAccess = authClient.GetAcrAccessTokenAsync(this.LoginUrl, scope, AcrRefresh.token).GetAwaiter().GetResult().AccessToken;
-                AcrAccessTokens[scope] = acrAccess;
+                cacheToken(acrAccess, scope);
+
             }
             else if (Mode == LoginMode.TokenAuth)
             {
                 string acrAccess = authClient.GetAcrAccessTokenFromLoginAsync(this.LoginUrl, scope).GetAwaiter().GetResult().AccessToken;
-                AcrAccessTokens[scope] = acrAccess;
+                cacheToken(acrAccess, scope);
             }
 
-            return AcrAccessTokens[scope];
+            return AcrAccessTokens[scope].token;
         }
 
-        /* Acquires the required scope for a specific operation. This will be done by obtaining a chllange and parsing out the scope
+        private void validateOrUpdateRefreshToken()
+        {
+
+            // Token is still valid, no change necessary
+            if (AcrRefresh.Expiration > DateTime.UtcNow) return;
+
+            // Need to refresh AAD access token to obtain a new ACR refresh token
+            if (AadAccess.Expiration < DateTime.UtcNow)
+            {
+                if (acquireNewAADToken == null)
+                {
+                    throw new Exception("The Provided AAD token has expired and no callback was provided. Acre Refresh tokens cannot be updated.");
+                }
+                AadAccess = acquireNewAADToken();
+            }
+
+            // Obtain a new refresh Token using the regenerated / previously valid token
+            AcrRefresh.token = authClient.GetAcrRefreshTokenAsync("access_token", this.LoginUrl, Tenant, null, AadAccess.token).GetAwaiter().GetResult().RefreshToken;
+            AcrRefresh.Expiration = DateTime.UtcNow.AddMinutes(REFRESH_TOKEN_EXPIRATION_MIN);
+
+        }
+
+        private void cacheToken(string acrAccess, string scope)
+        {
+            Token access = new Token();
+            access.token = acrAccess;
+            access.Expiration = DateTime.UtcNow.AddMinutes(ACCESS_TOKEN_EXPIRATION_MIN);
+            AcrAccessTokens[scope] = access;
+        }
+
+        /* Acquires the required scope for a specific operation. This will be done by obtaining a challenge and parsing out the scope
          from the ww-Authenticate header. In the event of failure (Some endpoints do not seem to return the scope) it will attempt
          resolution through a small local resolver. */
         public string getScope(string operation, string method, string path)
@@ -228,21 +275,22 @@ namespace Microsoft.Azure.ContainerRegistry
             }
             catch (Exception e)
             {
-                throw new Exception("Could not identify appropiate Token scope: " + e.Message);
+                throw new Exception("Could not identify appropriate Token scope: " + e.Message);
             }
             return scope;
 
         }
 
-        /*Local resolver for endpoints that will often retuen no scope.*/
+        /*Local resolver for endpoints that will often return no scope.*/
         private string hardcodedScopes(string operation)
         {
             switch (operation)
             {
                 case "/acr/v1/_catalog":
+                case "/v2/":
                     return "registry:catalog:*";
                 default:
-                    throw new Exception("Could not determine appropiate scope for the speified operation");
+                    throw new Exception("Could not determine appropriate scope for the specified operation");
 
             }
         }
@@ -277,7 +325,8 @@ namespace Microsoft.Azure.ContainerRegistry
         }
 
         /*Provides cleanup in case Cache is getting large. */
-        public void clearCache() {
+        public void clearCache()
+        {
             AcrAccessTokens.Clear();
             AcrScopes.Clear();
         }
@@ -290,39 +339,6 @@ namespace Microsoft.Azure.ContainerRegistry
         }
 
         #endregion
-
-        //@DEPRECATED
-        private void getFromInside()
-        {
-
-            // For Bearer modes
-
-            // Step 1: get challenge response from /v2/ API. THe response Www-Authenticate header is token server URL.
-            string challegeUrl = (LoginUrl.StartsWith("https://") ? "" : "https://") + LoginUrl + (LoginUrl.EndsWith("/") ? "" : "/") + "v2/";
-            HttpClient runtimeClient = new HttpClient();
-            HttpResponseMessage response = null;
-            string tokenServerUrl = "";
-            try
-            {
-                response = runtimeClient.GetAsync(challegeUrl, RequestCancellationToken).GetAwaiter().GetResult();
-                tokenServerUrl = parseHeader(response.Headers.GetValues("Www-Authenticate").FirstOrDefault())["Bearer realm"];
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("v2 call throws exception {0}", e.Message);
-            }
-
-            if (!String.IsNullOrEmpty(tokenServerUrl))
-            {
-                //AcrRefresh.token = noCredentialClient.GetAcrRefreshTokenAsync("access_token", this.LoginUrl, Tenant, null, AadAccess.token).GetAwaiter().GetResult().RefreshToken;
-
-            }
-            else
-            {
-                throw new Exception("Could not find Authentication endpoint for this registry");
-            }
-        }
-
     }
 }
 
