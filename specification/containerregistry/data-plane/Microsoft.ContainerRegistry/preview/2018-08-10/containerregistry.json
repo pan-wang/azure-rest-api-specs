@@ -182,6 +182,7 @@
         "tags": [
           "Manifest"
         ],
+        "x-ms-long-running-operation": false,
         "description": "Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
         "x-ms-examples": {
           "Put manifest": {
@@ -200,17 +201,27 @@
             "$ref": "#/parameters/ImageReference"
           },
           {
-            "name": "payload",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/Manifest"
-            }
+            "$ref": "#/parameters/ManifestBody"
           }
         ],
         "responses": {
           "201": {
-            "description": "The manifest is updated"
+            "description": "The manifest is updated",
+            "schema": {},
+            "headers": {
+              "Docker-Content-Digest": {
+                "type": "string",
+                "description": "Identifies the docker upload uuid for the current request."
+              },
+              "Location": {
+                "type": "string",
+                "description": "The canonical location url of the uploaded manifest."
+              },
+              "Content-Length": {
+                "type": "integer",
+                "description": "The canonical location url of the uploaded manifest."
+              }
+            }
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -754,23 +765,17 @@
             "$ref": "#/parameters/Tenant"
           },
           {
-            "$ref": "#/parameters/Refresh_token"
+            "$ref": "#/parameters/RefreshToken"
           },
           {
-            "$ref": "#/parameters/Access_token"
+            "$ref": "#/parameters/AccessToken"
           }
         ],
         "responses": {
           "200": {
             "description": "Refresh token acquired",
             "schema": {
-              "type": "object",
-              "properties": {
-                "refresh_token": {
-                  "description": "The refresh token to be used for generating access tokens",
-                  "type": "string"
-                }
-              }
+              "$ref": "#/definitions/RefreshToken"
             }
           },
           "default": {
@@ -780,7 +785,12 @@
             }
           }
         },
-        "security": []
+        "security": [],
+        "x-ms-examples": {
+          "Exchange AAD Token for ACR Refresh": {
+            "$ref": "./examples/PostRefreshToken.json"
+          }
+        }
       }
     },
     "/oauth2/token": {
@@ -827,13 +837,7 @@
           "200": {
             "description": "Access token acquired",
             "schema": {
-              "type": "object",
-              "properties": {
-                "access_token": {
-                  "description": "The access token for performing authenticated requests",
-                  "type": "string"
-                }
-              }
+              "$ref": "#/definitions/AccessToken"
             }
           },
           "default": {
@@ -843,7 +847,12 @@
             }
           }
         },
-        "security": []
+        "security": [],
+        "x-ms-examples": {
+          "Get Access Token with Refresh Token": {
+            "$ref": "./examples/PostAccessToken.json"
+          }
+        }
       },
       "get": {
         "tags": [
@@ -873,13 +882,7 @@
           "200": {
             "description": "Access token acquired",
             "schema": {
-              "type": "object",
-              "properties": {
-                "access_token": {
-                  "description": "The access token for performing authenticated requests",
-                  "type": "string"
-                }
-              }
+              "$ref": "#/definitions/AccessToken"
             }
           },
           "default": {
@@ -893,7 +896,12 @@
           {
             "registry_auth": []
           }
-        ]
+        ],
+        "x-ms-examples": {
+          "Get Access Token with username and password": {
+            "$ref": "./examples/GetAccessToken.json"
+          }
+        }
       }
     }
   },
@@ -1284,6 +1292,24 @@
           "tags",
           "tags"
         ]
+      }
+    },
+    "RefreshToken": {
+      "type": "object",
+      "properties": {
+        "refresh_token": {
+          "description": "The refresh token to be used for generating access tokens",
+          "type": "string"
+        }
+      }
+    },
+    "AccessToken": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "description": "The access token for performing authenticated requests",
+          "type": "string"
+        }
       }
     },
     "AcrErrors": {
@@ -1701,9 +1727,9 @@
       "description": "Registry login URL",
       "required": true,
       "type": "string",
-      "format": "url",
       "in": "path",
-      "x-ms-skip-url-encoding": true
+      "x-ms-skip-url-encoding": true,
+      "x-ms-parameter-location": "client"
     },
     "ImageReference": {
       "name": "reference",
@@ -1824,7 +1850,7 @@
       "type": "string",
       "x-ms-parameter-location": "method"
     },
-    "Refresh_token": {
+    "RefreshToken": {
       "name": "refresh_token",
       "in": "formData",
       "required": false,
@@ -1832,7 +1858,7 @@
       "type": "string",
       "x-ms-parameter-location": "method"
     },
-    "Access_token": {
+    "AccessToken": {
       "name": "access_token",
       "in": "formData",
       "required": false,
@@ -1846,6 +1872,16 @@
       "description": "Name of the image (including the namespace)",
       "required": true,
       "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "ManifestBody": {
+      "description": "Manifest body, can take v1 or v2 values depending on accept header",
+      "name": "payload",
+      "in": "body",
+      "required": true,
+      "schema": {
+        "$ref": "#/definitions/Manifest"
+      },
       "x-ms-parameter-location": "method"
     }
   }

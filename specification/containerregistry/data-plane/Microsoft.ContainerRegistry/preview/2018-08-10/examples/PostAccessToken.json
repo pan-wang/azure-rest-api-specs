@@ -1,0 +1,15 @@
+{
+  "parameters": {
+    "grant_type": "refresh_token",
+    "service": "someregistry.azurecr.io",
+    "scope": "registry:catalog:*",
+    "refreshToken": "eyJ0eXAiOiJKJhbGci1dCI6IkN0ZlFDOExlLTMejlnIiwidGlkIjoiNzJmOTgWItMmQ3Y2QwMTFkYjQ3Ii..."
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "access_token": "eyJ0eXAiOiJKJhbGcigdCI6IkN0ZlFaOExlLTMejlnIiwidGlkIjoiNzbmOTgWItMmQ3Y2QwMTFkYjQ3Ii..."
+      }
+    }
+  }
+}
