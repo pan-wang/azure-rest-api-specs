@@ -5,7 +5,6 @@
     "value": "{\"writeEnabled\": false}"
   },
   "responses": {
-    "204": {},
-    "404": {}
+    "204": {}
   }
 }

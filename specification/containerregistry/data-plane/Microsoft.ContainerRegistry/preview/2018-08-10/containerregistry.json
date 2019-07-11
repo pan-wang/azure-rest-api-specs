@@ -391,9 +391,6 @@
         "parameters": [
           {
             "$ref": "#/parameters/ImageName"
-          },
-          {
-            "$ref": "#/parameters/ManifestReference"
           }
         ],
         "responses": {
@@ -429,9 +426,6 @@
         "parameters": [
           {
             "$ref": "#/parameters/ImageName"
-          },
-          {
-            "$ref": "#/parameters/ManifestReference"
           },
           {
             "name": "value",
@@ -682,11 +676,7 @@
             "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "reference",
-            "in": "path",
-            "description": "A digest pointing to a specific image",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageReference"
           }
         ],
         "responses": {
