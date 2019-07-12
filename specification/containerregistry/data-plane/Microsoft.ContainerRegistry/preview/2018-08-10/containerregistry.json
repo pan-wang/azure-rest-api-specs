@@ -11,7 +11,7 @@
     "positionInOperation": "first",
     "parameters": [
       {
-        "$ref": "#/parameters/url"
+        "$ref": "#/parameters/Url"
       }
     ]
   },
@@ -515,15 +515,6 @@
           },
           {
             "$ref": "#/parameters/ManifestReference"
-          },
-          {
-            "in": "body",
-            "name": "value",
-            "description": "Tag details of a repository",
-            "required": false,
-            "schema": {
-              "$ref": "#/definitions/AcrRepositoryTags"
-            }
           }
         ],
         "responses": {
@@ -979,7 +970,6 @@
             "digest": "digest",
             "createdTime": "createdTime",
             "signed": true,
-            "quarantineState": "quarantineState",
             "lastUpdateTime": "lastUpdateTime"
           },
           {
@@ -993,7 +983,6 @@
             "digest": "digest",
             "createdTime": "createdTime",
             "signed": true,
-            "quarantineState": "quarantineState",
             "lastUpdateTime": "lastUpdateTime"
           }
         ]
@@ -1030,7 +1019,6 @@
           "digest": "digest",
           "createdTime": "createdTime",
           "signed": true,
-          "quarantineState": "quarantineState",
           "lastUpdateTime": "lastUpdateTime"
         }
       }
@@ -1711,7 +1699,7 @@
     }
   },
   "parameters": {
-    "url": {
+    "Url": {
       "name": "url",
       "x-ms-client-name": "loginUri",
       "description": "Registry login URL",

@@ -18,7 +18,7 @@ class Program
     {
         int timeoutInMilliseconds = 1500000;
         CancellationToken ct = new CancellationTokenSource(timeoutInMilliseconds).Token;
-        AzureContainerRegistryClient client = loginAad(ct);
+        AzureContainerRegistryClient client = loginOauth2(ct);
 
 
         try
@@ -71,18 +71,15 @@ class Program
     {
         Console.WriteLine("-- Token Oauth2 --");
 
-        string AAD_accessToken = "";
+        string AAD_accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6InU0T2ZORlBId0VCb3NIanRyYXVPYlY4NExuWSIsImtpZCI6InU0T2ZORlBId0VCb3NIanRyYXVPYlY4NExuWSJ9.eyJhdWQiOiJodHRwczovL21hbmFnZW1lbnQuY29yZS53aW5kb3dzLm5ldC8iLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC83MmY5ODhiZi04NmYxLTQxYWYtOTFhYi0yZDdjZDAxMWRiNDcvIiwiaWF0IjoxNTYyNzA3NTA0LCJuYmYiOjE1NjI3MDc1MDQsImV4cCI6MTU2MjcxMTQwNCwiX2NsYWltX25hbWVzIjp7Imdyb3VwcyI6InNyYzEifSwiX2NsYWltX3NvdXJjZXMiOnsic3JjMSI6eyJlbmRwb2ludCI6Imh0dHBzOi8vZ3JhcGgud2luZG93cy5uZXQvNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3L3VzZXJzLzU3ZmEyMGQwLWNhODItNGY4Ni05ZGE2LWQ3YjBkZWM4YmM4Ni9nZXRNZW1iZXJPYmplY3RzIn19LCJhY3IiOiIxIiwiYWlvIjoiQVVRQXUvOE1BQUFBOEZod1k1Ukg4dXpyWEdLUzBPQ21uRWpvSm9TbitpU2VpMUg1VHk5SmtoVFZTTXBFYlVVMWpra2dqSUJ6UDNFeHJHNmFnT2hITk14Y1p6M0tRTmhWMXc9PSIsImFtciI6WyJyc2EiLCJtZmEiXSwiYXBwaWQiOiIwNGIwNzc5NS04ZGRiLTQ2MWEtYmJlZS0wMmY5ZTFiZjdiNDYiLCJhcHBpZGFjciI6IjAiLCJkZXZpY2VpZCI6IjVmY2ZjZWRlLTI1NGYtNDQ4Yy05MWI2LWUyMjQ5MjZlNDNlYSIsImZhbWlseV9uYW1lIjoiUmV5IExvbmRvbm8iLCJnaXZlbl9uYW1lIjoiRXN0ZWJhbiIsImlwYWRkciI6IjEzMS4xMDcuMTU5LjIwMyIsIm5hbWUiOiJFc3RlYmFuIFJleSBMb25kb25vIiwib2lkIjoiNTdmYTIwZDAtY2E4Mi00Zjg2LTlkYTYtZDdiMGRlYzhiYzg2Iiwib25wcmVtX3NpZCI6IlMtMS01LTIxLTIxMjc1MjExODQtMTYwNDAxMjkyMC0xODg3OTI3NTI3LTM2MDA2NDYzIiwicHVpZCI6IjEwMDMyMDAwNDk3N0Q1NTQiLCJzY3AiOiJ1c2VyX2ltcGVyc29uYXRpb24iLCJzdWIiOiJPU0NZSl80WXhkNUx1bUlaUDhJc2Ridjl3cmhsVnV6Tk1qRkk5cWtMejlnIiwidGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3IiwidW5pcXVlX25hbWUiOiJ0LWVzcmVAbWljcm9zb2Z0LmNvbSIsInVwbiI6InQtZXNyZUBtaWNyb3NvZnQuY29tIiwidXRpIjoieGZiYkJZQVRWa09aV1BoMnJ5OEZBQSIsInZlciI6IjEuMCJ9.TsxGne2kU9ncMHOv-MAzIj1YmVhWvQF2m6aUUheJfmWhoBJkqFK3FCRGZhJmVGE71dzdKeOC5l0t4WmyZAQZfBaPxqyvJ9exlYxZzpRs0pV8wzuEKVCFIiYSYViKgfnQQVT6LVtPNvcIkOqp3MQPj0Ln8woVbUNhYAvasuUYDAnysY3ov79WaMG9_IYFMkd9JIPdD_RIsazSGEYjvMD9mAkIRiTIlczIr3LTOAKHHHq2L4X9UkYSqFY3H9ymFqd0Y-tyxItmF_WKHLEwxrRy5KZuJYFuqYJBhJEQ4ySEdBvGiFsKiK9RcqXpBV9ZZ0Z0J-8FxT0iWl6HizBTyWGYaA";
         string tenant = null; // Tenant is optional
         string loginUrl = "csharpsdktest.azurecr.io";
 
         AcrClientCredentials credentials = new AcrClientCredentials(AAD_accessToken, loginUrl, tenant, null, ct,
         () =>
         {
-            AcrClientCredentials.Token tok = new AcrClientCredentials.Token();
-            tok.token = AAD_accessToken;
-            tok.Expiration = DateTime.UtcNow.AddMinutes(AcrClientCredentials.ACCESS_TOKEN_EXPIRATION_MIN);
-            return tok;
-
+            // Note: should be using real new access token
+            return AcrClientCredentials.MakeToken(AAD_accessToken);
         });
         AzureContainerRegistryClient client = new AzureContainerRegistryClient(credentials);
         client.LoginUri = "https://csharpsdktest.azurecr.io";
@@ -92,26 +89,26 @@ class Program
 
 
     /**
-        * Test the V1 api endpoints:
-        * /acr/v1/_catalog
-        *  - get               - Example Provided (1)
-        *  
-        * /acr/v1/{name}/_tag/ {reference}
-        *  - get               - Example Provided (2)
-        *  - patch             - Example Provided (3)
-        *  - delete            - Example Provided (4)
-        * 
-        * /acr/v1/{name}/_tags
-        *  - get               - Example Provided (5)
-        *  
-        * /acr/v1/{name}/_manifests
-        *  - get               - Example Provided (6)
-        *  
-        * /acr/v1/{name}/_manifests/{reference}
-        *  - get               - Example Provided (7)
-        *  - patch             - Example Provided (8)
-        * 
-        */
+     * Test the V1 api endpoints:
+     * /acr/v1/_catalog
+     *  - get               - Example Provided (1)
+     *  
+     * /acr/v1/{name}/_tag/ {reference}
+     *  - get               - Example Provided (2)
+     *  - patch             - Example Provided (3)
+     *  - delete            - Example Provided (4)
+     * 
+     * /acr/v1/{name}/_tags
+     *  - get               - Example Provided (5)
+     *  
+     * /acr/v1/{name}/_manifests
+     *  - get               - Example Provided (6)
+     *  
+     * /acr/v1/{name}/_manifests/{reference}
+     *  - get               - Example Provided (7)
+     *  - patch             - Example Provided (8)
+     * 
+     */
     private static void testACRV1(AzureContainerRegistryClient client, CancellationToken ct)
     {
         // --> Acr V1 Get Repositories  (1)
@@ -194,6 +191,11 @@ class Program
                     Console.WriteLine(SafeJsonConvert.SerializeObject(manifest, client.SerializationSettings));
                 }
             }
+
+            RepositoryAttributes attributes = client.GetAcrRepositoryAttributesAsync("hello-world").GetAwaiter().GetResult();
+            client.UpdateAcrRepositoryAttributesAsync("hello-world", attributes.ChangeableAttributes).GetAwaiter().GetResult();
+            //client.DeleteAcrRepositoryAsync("hello-world-2").GetAwaiter().GetResult();
+
         }
         // --> Acr V1 Patch Tag  (3)
         Console.WriteLine("PATCH /acr/v1/{name}/_tags/{reference}");
@@ -290,10 +292,6 @@ class Program
                 // Use the same manifest to update the manifest
                 // Keep in mind, you need to wait at least 5 seconds to let this change be committed in server.
                 // Getting manifest again right after updating will actually getting old manifest.
-                if (!string.Equals(tag, "3.7"))
-                {
-                    continue;
-                }
 
                 // --> Docker V2 Update Manifest   (4)
                 client.PutManifestAsync(repository,

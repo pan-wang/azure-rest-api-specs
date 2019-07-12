@@ -1,9 +1,10 @@
 {
   "parameters": {
+    "url": "acrapi.azurecr-test.io",
     "name": "nanoserver",
     "writeEnabled": false
   },
   "responses": {
-    "204": {}
+    "200": {}
   }
 }

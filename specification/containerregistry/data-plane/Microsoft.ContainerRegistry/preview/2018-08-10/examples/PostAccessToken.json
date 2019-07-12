@@ -1,9 +1,10 @@
 {
   "parameters": {
+    "url": "acrapi.azurecr-test.io",
     "grant_type": "refresh_token",
     "service": "someregistry.azurecr.io",
     "scope": "registry:catalog:*",
-    "refreshToken": "eyJ0eXAiOiJKJhbGci1dCI6IkN0ZlFDOExlLTMejlnIiwidGlkIjoiNzJmOTgWItMmQ3Y2QwMTFkYjQ3Ii..."
+    "refresh_token": "eyJ0eXAiOiJKJhbGci1dCI6IkN0ZlFDOExlLTMejlnIiwidGlkIjoiNzJmOTgWItMmQ3Y2QwMTFkYjQ3Ii..."
   },
   "responses": {
     "200": {
