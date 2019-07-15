@@ -1,11 +1,36 @@
 {
   "swagger": "2.0",
   "info": {
-    "description": "V2 API definition for the Azure Container Registry runtime",
-    "version": "2018-08-10-preview",
-    "title": "Azure Container Registry"
+    "title": "Azure Container Registry",
+    "description": "Metadata API definition for the Azure Container Registry runtime",
+    "version": "2018-08-10-preview"
   },
-  "host": "acrapi.azurecr-test.io",
+  "x-ms-parameterized-host": {
+    "hostTemplate": "{url}",
+    "useSchemePrefix": false,
+    "positionInOperation": "first",
+    "parameters": [
+      {
+        "$ref": "#/parameters/Url"
+      }
+    ]
+  },
+  "securityDefinitions": {
+    "registry_auth": {
+      "type": "basic"
+    },
+    "registry_oauth2": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "Authorization"
+    }
+  },
+  "security": [
+    {
+      "registry_auth": [],
+      "registry_oauth2": []
+    }
+  ],
   "tags": [
     {
       "name": "v2",
@@ -43,11 +68,6 @@
   "schemes": [
     "https"
   ],
-  "security": [
-    {
-      "registry_auth": []
-    }
-  ],
   "produces": [
     "application/json"
   ],
@@ -82,7 +102,7 @@
         "tags": [
           "Tag"
         ],
-        "description": "Fetch the tags under the repository identified by 'name'",
+        "description": "Fetch the tags under the repository identified by name",
         "x-ms-examples": {
           "List tags": {
             "$ref": "./examples/GetTagList.json"
@@ -91,22 +111,21 @@
         "operationId": "GetTagList",
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           }
         ],
         "responses": {
           "200": {
             "description": "Gives a list of tags for the names repository.",
+            "headers": {
+              "Link": {
+                "description": "next paginated result",
+                "type": "string"
+              }
+            },
             "schema": {
               "$ref": "#/definitions/RepositoryTags"
             }
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -131,17 +150,16 @@
         "operationId": "GetManifest",
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "reference",
-            "in": "path",
-            "description": "A tag or a digest, pointing to a specific image",
-            "required": true,
+            "$ref": "#/parameters/ImageReference"
+          },
+          {
+            "name": "accept",
+            "in": "header",
+            "description": "Accept header string delimited by comma. For example, application/vnd.docker.distribution.manifest.v2+json",
+            "required": false,
             "type": "string"
           }
         ],
@@ -152,8 +170,89 @@
               "$ref": "#/definitions/Manifest"
             }
           },
-          "404": {
-            "description": "Image doesn't exist"
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Manifest"
+        ],
+        "x-ms-long-running-operation": false,
+        "description": "Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
+        "x-ms-examples": {
+          "Put manifest": {
+            "$ref": "./examples/CreateManifest.json"
+          }
+        },
+        "consumes": [
+          "application/vnd.docker.distribution.manifest.v2+json"
+        ],
+        "operationId": "CreateManifest",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ImageName"
+          },
+          {
+            "$ref": "#/parameters/ImageReference"
+          },
+          {
+            "$ref": "#/parameters/ManifestBody"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The manifest is updated",
+            "schema": {},
+            "headers": {
+              "Docker-Content-Digest": {
+                "type": "string",
+                "description": "Identifies the docker upload uuid for the current request."
+              },
+              "Location": {
+                "type": "string",
+                "description": "The canonical location url of the uploaded manifest."
+              },
+              "Content-Length": {
+                "type": "integer",
+                "description": "The canonical location url of the uploaded manifest."
+              }
+            }
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Manifest"
+        ],
+        "description": "Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.",
+        "x-ms-examples": {
+          "Delete manifest": {
+            "$ref": "./examples/DeleteManifest.json"
+          }
+        },
+        "operationId": "DeleteManifest",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ImageName"
+          },
+          {
+            "$ref": "#/parameters/ImageReference"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The manifest has been deleted"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -178,23 +277,21 @@
         },
         "parameters": [
           {
-            "name": "last",
-            "in": "query",
-            "description": "query parameter for the last item in previous query",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryNum"
           }
         ],
         "responses": {
           "200": {
             "description": "Returns a list of repositories",
+            "headers": {
+              "Link": {
+                "description": "next paginated result",
+                "type": "string"
+              }
+            },
             "schema": {
               "$ref": "#/definitions/Repositories"
             }
@@ -222,18 +319,10 @@
         },
         "parameters": [
           {
-            "name": "last",
-            "in": "query",
-            "description": "query parameter for the last item in previous query",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryNum"
           }
         ],
         "responses": {
@@ -267,11 +356,7 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           }
         ],
         "responses": {
@@ -280,9 +365,6 @@
             "schema": {
               "$ref": "#/definitions/RepositoryAttributes"
             }
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -296,7 +378,7 @@
         "tags": [
           "AcrRepository"
         ],
-        "description": "Delete a repository",
+        "description": "Delete the repository identified by `name`",
         "operationId": "DeleteAcrRepository",
         "x-ms-examples": {
           "Delete a repository": {
@@ -305,11 +387,7 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           }
         ],
         "responses": {
@@ -318,9 +396,6 @@
             "schema": {
               "$ref": "#/definitions/DeletedRepository"
             }
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -335,7 +410,7 @@
           "AcrRepository",
           "AcrMetadata"
         ],
-        "description": "Update attributes of a repository",
+        "description": "Update the attribute identified by `name` where `reference` is the name of the repository.",
         "operationId": "UpdateAcrRepositoryAttributes",
         "x-ms-examples": {
           "Update repository attributes": {
@@ -347,11 +422,7 @@
         ],
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
             "name": "value",
@@ -364,11 +435,8 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
             "description": "The attributes is updated"
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -394,39 +462,19 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "last",
-            "in": "query",
-            "description": "query parameter for the last item in previous query",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryNum"
           },
           {
-            "name": "orderby",
-            "in": "query",
-            "description": "orderby query parameter",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryOrderBy"
           },
           {
-            "name": "digest",
-            "in": "query",
-            "description": "filter by digest",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryDigest"
           }
         ],
         "responses": {
@@ -435,9 +483,6 @@
             "schema": {
               "$ref": "#/definitions/AcrRepositoryTags"
             }
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -454,27 +499,19 @@
           "AcrTag",
           "AcrMetadata"
         ],
-        "description": "Get manifest attributes by tag",
+        "description": "Get tag attributes by tag",
         "operationId": "GetAcrTagAttributes",
         "x-ms-examples": {
-          "Get manifest attributes": {
+          "Get tag attributes": {
             "$ref": "./examples/GetAcrTagAttributes.json"
           }
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "reference",
-            "in": "path",
-            "description": "A tag name of the image",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ManifestReference"
           }
         ],
         "responses": {
@@ -483,9 +520,6 @@
             "schema": {
               "$ref": "#/definitions/AcrTagAttributes"
             }
-          },
-          "404": {
-            "description": "Tag doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -512,35 +546,18 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "reference",
-            "in": "path",
-            "description": "A tag name of the image",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ManifestReference"
           },
           {
-            "in": "body",
-            "name": "value",
-            "description": "Changeable attribute value",
-            "required": false,
-            "schema": {
-              "$ref": "#/definitions/ChangeableAttributes"
-            }
+            "$ref": "#/parameters/RepoValue"
           }
         ],
         "responses": {
-          "204": {
+          "200": {
             "description": "The attributes are updated"
-          },
-          "404": {
-            "description": "Manifest doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -567,26 +584,15 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "reference",
-            "in": "path",
-            "description": "A tag name of the image",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ManifestReference"
           }
         ],
         "responses": {
-          "204": {
+          "202": {
             "description": "The tag is deleted"
-          },
-          "404": {
-            "description": "Tag doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -612,32 +618,16 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "last",
-            "in": "query",
-            "description": "query parameter for the last item in previous query",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryLast"
           },
           {
-            "name": "n",
-            "in": "query",
-            "description": "query parameter for max number of items",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryNum"
           },
           {
-            "name": "orderby",
-            "in": "query",
-            "description": "orderby query parameter",
-            "required": false,
-            "type": "string"
+            "$ref": "#/parameters/QueryOrderBy"
           }
         ],
         "responses": {
@@ -646,9 +636,6 @@
             "schema": {
               "$ref": "#/definitions/AcrManifests"
             }
-          },
-          "404": {
-            "description": "Image doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -674,18 +661,10 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "reference",
-            "in": "path",
-            "description": "A digest pointing to a specific image",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageReference"
           }
         ],
         "responses": {
@@ -694,9 +673,6 @@
             "schema": {
               "$ref": "#/definitions/AcrManifestAttributes"
             }
-          },
-          "404": {
-            "description": "Manifest doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -723,35 +699,18 @@
         },
         "parameters": [
           {
-            "name": "name",
-            "in": "path",
-            "description": "Name of the image (including the namespace)",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageName"
           },
           {
-            "name": "reference",
-            "in": "path",
-            "description": "A tag or a digest, pointing to a specific image",
-            "required": true,
-            "type": "string"
+            "$ref": "#/parameters/ImageReference"
           },
           {
-            "in": "body",
-            "name": "value",
-            "description": "Changeable attribute value",
-            "required": false,
-            "schema": {
-              "$ref": "#/definitions/ChangeableAttributes"
-            }
+            "$ref": "#/parameters/RepoValue"
           }
         ],
         "responses": {
-          "204": {
+          "200": {
             "description": "The attributes are updated"
-          },
-          "404": {
-            "description": "Manifest doesn't exist"
           },
           "default": {
             "description": "ACR error response describing why the operation failed.",
@@ -761,11 +720,167 @@
           }
         }
       }
-    }
-  },
-  "securityDefinitions": {
-    "registry_auth": {
-      "type": "basic"
+    },
+    "/oauth2/exchange": {
+      "post": {
+        "tags": [
+          "AcrToken",
+          "RefreshToken"
+        ],
+        "description": "Exchange AAD tokens for an ACR refresh Token",
+        "operationId": "GetAcrRefreshTokenFromExchange",
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/parameters/Grant_type"
+          },
+          {
+            "$ref": "#/parameters/Service"
+          },
+          {
+            "$ref": "#/parameters/Tenant"
+          },
+          {
+            "$ref": "#/parameters/RefreshToken"
+          },
+          {
+            "$ref": "#/parameters/AccessToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refresh token acquired",
+            "schema": {
+              "$ref": "#/definitions/RefreshToken"
+            }
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        },
+        "security": [],
+        "x-ms-examples": {
+          "Exchange AAD Token for ACR Refresh": {
+            "$ref": "./examples/PostRefreshToken.json"
+          }
+        }
+      }
+    },
+    "/oauth2/token": {
+      "post": {
+        "tags": [
+          "AcrToken",
+          "AccessToken"
+        ],
+        "description": "Exchange ACR Refresh token for an ACR Access Token",
+        "operationId": "GetAcrAccessToken",
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "parameters": [
+          {
+            "name": "grant_type",
+            "in": "formData",
+            "description": "Grant type is expected to be refresh_token",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "refresh_token"
+            ]
+          },
+          {
+            "$ref": "#/parameters/Service"
+          },
+          {
+            "name": "scope",
+            "in": "formData",
+            "required": true,
+            "description": "Which is expected to be a valid scope, and can be specified more than once for multiple scope requests. You obtained this from the Www-Authenticate response header from the challenge.",
+            "type": "string"
+          },
+          {
+            "name": "refresh_token",
+            "in": "formData",
+            "required": true,
+            "description": "Must be a valid ACR refresh token",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access token acquired",
+            "schema": {
+              "$ref": "#/definitions/AccessToken"
+            }
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        },
+        "security": [],
+        "x-ms-examples": {
+          "Get Access Token with Refresh Token": {
+            "$ref": "./examples/PostAccessToken.json"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "AcrToken",
+          "AccessToken",
+          "userLogin"
+        ],
+        "description": "Exchange Username, Password and Scope an ACR Access Token",
+        "operationId": "GetAcrAccessTokenFromLogin",
+        "parameters": [
+          {
+            "name": "service",
+            "in": "query",
+            "required": true,
+            "description": "Indicates the name of your Azure container registry.",
+            "type": "string"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": true,
+            "description": "Expected to be a valid scope, and can be specified more than once for multiple scope requests. You can obtain this from the Www-Authenticate response header from the challenge.",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access token acquired",
+            "schema": {
+              "$ref": "#/definitions/AccessToken"
+            }
+          },
+          "default": {
+            "description": "ACR error response describing why the operation failed.",
+            "schema": {
+              "$ref": "#/definitions/AcrErrors"
+            }
+          }
+        },
+        "security": [
+          {
+            "registry_auth": []
+          }
+        ],
+        "x-ms-examples": {
+          "Get Access Token with username and password": {
+            "$ref": "./examples/GetAccessToken.json"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -790,11 +905,11 @@
           "description": "Image last update time"
         },
         "manifestCount": {
-          "type": "number",
+          "type": "integer",
           "description": "Number of the manifests"
         },
         "tagCount": {
-          "type": "number",
+          "type": "integer",
           "description": "Number of the tags"
         },
         "changeableAttributes": {
@@ -852,7 +967,6 @@
             "digest": "digest",
             "createdTime": "createdTime",
             "signed": true,
-            "quarantineState": "quarantineState",
             "lastUpdateTime": "lastUpdateTime"
           },
           {
@@ -866,7 +980,6 @@
             "digest": "digest",
             "createdTime": "createdTime",
             "signed": true,
-            "quarantineState": "quarantineState",
             "lastUpdateTime": "lastUpdateTime"
           }
         ]
@@ -903,7 +1016,6 @@
           "digest": "digest",
           "createdTime": "createdTime",
           "signed": true,
-          "quarantineState": "quarantineState",
           "lastUpdateTime": "lastUpdateTime"
         }
       }
@@ -986,6 +1098,7 @@
           "description": "Image name"
         },
         "manifests": {
+          "x-ms-client-name": "ManifestsAttributes",
           "type": "array",
           "description": "List of manifests",
           "items": {
@@ -1009,8 +1122,10 @@
             },
             "os": "os",
             "digest": "digest",
+            "imageSize": 2401606,
             "createdTime": "createdTime",
             "mediaType": "mediaType",
+            "configMediaType": "configMediaType",
             "lastUpdateTime": "lastUpdateTime",
             "architecture": "architecture",
             "tags": [
@@ -1029,8 +1144,10 @@
             },
             "os": "os",
             "digest": "digest",
+            "imageSize": 2401606,
             "createdTime": "createdTime",
             "mediaType": "mediaType",
+            "configMediaType": "configMediaType",
             "lastUpdateTime": "lastUpdateTime",
             "architecture": "architecture",
             "tags": [
@@ -1053,6 +1170,7 @@
           "type": "string"
         },
         "manifest": {
+          "x-ms-client-name": "ManifestAttributes",
           "description": "Manifest attributes",
           "$ref": "#/definitions/AcrManifestAttributesBase"
         }
@@ -1062,11 +1180,13 @@
         "imageName": "nanoserver",
         "manifest": {
           "digest": "sha256:110d2b6c84592561338aa040b1b14b7ab81c2f9edbd564c2285dd7d70d777086",
+          "imageSize": 2401606,
           "createdTime": "2018-09-06T06:17:20.9983915Z",
           "lastUpdateTime": "2018-09-06T06:17:20.9983915Z",
           "architecture": "amd64",
           "os": "windows",
           "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+          "configMediaType": "application/vnd.docker.container.image.v1+json",
           "tags": [
             "4.7.2-20180905-nanoserver-1803"
           ],
@@ -1085,7 +1205,11 @@
       "properties": {
         "digest": {
           "type": "string",
-          "description": "Manifest digest"
+          "description": "Manifest"
+        },
+        "imageSize": {
+          "type": "integer",
+          "description": "Image size"
         },
         "createdTime": {
           "type": "string",
@@ -1106,6 +1230,10 @@
         "mediaType": {
           "type": "string",
           "description": "Media type"
+        },
+        "configMediaType": {
+          "type": "string",
+          "description": "Config blob media type"
         },
         "tags": {
           "type": "array",
@@ -1129,14 +1257,34 @@
         },
         "os": "os",
         "digest": "digest",
+        "imageSize": 2401606,
         "createdTime": "createdTime",
         "mediaType": "mediaType",
+        "configMediaType": "configMediaType",
         "lastUpdateTime": "lastUpdateTime",
         "architecture": "architecture",
         "tags": [
           "tags",
           "tags"
         ]
+      }
+    },
+    "RefreshToken": {
+      "type": "object",
+      "properties": {
+        "refresh_token": {
+          "description": "The refresh token to be used for generating access tokens",
+          "type": "string"
+        }
+      }
+    },
+    "AccessToken": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "description": "The access token for performing authenticated requests",
+          "type": "string"
+        }
       }
     },
     "AcrErrors": {
@@ -1179,8 +1327,23 @@
       "description": "Returns the requested manifest file",
       "properties": {
         "schemaVersion": {
-          "type": "number",
+          "type": "integer",
           "description": "Schema version"
+        },
+        "mediaType": {
+          "type": "string",
+          "description": "Media type usually application/vnd.docker.distribution.manifest.v2+json if this is in the accept header"
+        },
+        "config": {
+          "description": "V2 image config descriptor",
+          "$ref": "#/definitions/V2Descriptor"
+        },
+        "layers": {
+          "type": "array",
+          "description": "List of V2 image layer information",
+          "items": {
+            "$ref": "#/definitions/V2Descriptor"
+          }
         },
         "architecture": {
           "type": "string",
@@ -1198,15 +1361,14 @@
           "type": "array",
           "description": "List of layer information",
           "items": {
-            "$ref": "#/definitions/ImageLayer"
+            "$ref": "#/definitions/FsLayer"
           }
         },
         "history": {
           "type": "array",
           "description": "Image history",
-          "x-ms-client-name": "ImageHistories",
           "items": {
-            "$ref": "#/definitions/ImageHistory"
+            "$ref": "#/definitions/History"
           }
         },
         "signatures": {
@@ -1218,31 +1380,18 @@
         }
       },
       "example": {
-        "name": "name",
-        "tag": "tag",
-        "fsLayers": [
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+        "config": {
+          "mediaType": "application/vnd.docker.container.image.v1+json",
+          "size": 1512,
+          "digest": "sha256:6d1ef012b5674ad8a127ecfa9b5e6f5178d171b90ee462846974177fd9bdd39f"
+        },
+        "layers": [
           {
-            "blobSum": "sha256:1f7d468f830cb0ed4beb8edc9438f18096e8c682e56a35242f60e6c61b718b30"
-          },
-          {
-            "blobSum": "sha256:2f7d468f830cb0ed4beb8edc9438f18096e8c682e56a35242f60e6c61b718b31"
-          }
-        ],
-        "history": "history",
-        "signatures": [
-          {
-            "header": {
-              "jwk": {
-                "crv": "P-256",
-                "kid": "WGXM:EYWQ:DA53:LQUP:BCWG:5RDG:S3ZM:ETH7:VMQS:WWKZ:EWDG:V74Q",
-                "kty": "EC",
-                "x": "OxZ9k5BVjPZ7jb3BmBD4X0d8MVPJqfF4NeSe8reoqnY",
-                "y": "EaCqTe4-vYwhk7qU6Bs2-AeLGOVtCe_-IY2MdE0Vfyc"
-              },
-              "alg": "ES256"
-            },
-            "signature": "p73LfotMGD8nNXz2g9YX2XtSllb4GI5-b3vjqP5N0nkv8QXg-r5z_omGiVbOZE2BYG1X_4TIN23l1KSEqsXxOg",
-            "protected": "eyJmb3JtYXRMZW5ndGgiOjI5ODYsImZvcm1hdFRhaWwiOiJDbjAiLCJ0aW1lIjoiMjAxOC0wOS0yMFQyMzo0MTo1MloifQ"
+            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+            "size": 2107098,
+            "digest": "sha256:5d20c808ce198565ff70b3ed23a991dd49afac45dece63474b27ce6ed036adc6"
           }
         ]
       }
@@ -1260,7 +1409,6 @@
         },
         "protected": {
           "type": "string",
-          "x-ms-client-name": "protectedHeader",
           "description": "The signed protected header"
         }
       },
@@ -1316,7 +1464,7 @@
         }
       }
     },
-    "ImageHistory": {
+    "History": {
       "description": "A list of unstructured historical data for v1 compatibility",
       "properties": {
         "v1Compatibility": {
@@ -1378,12 +1526,12 @@
           "description": "Error message"
         },
         "detail": {
-          "type": "string",
+          "type": "object",
           "description": "Error details"
         }
       }
     },
-    "ImageLayer": {
+    "FsLayer": {
       "description": "Image layer information",
       "properties": {
         "blobSum": {
@@ -1393,6 +1541,28 @@
       },
       "example": {
         "blobSum": "sha256:1f7d468f830cb0ed4beb8edc9438f18096e8c682e56a35242f60e6c61b718b30"
+      }
+    },
+    "V2Descriptor": {
+      "description": "Docker V2 image layer descriptor including config and layers",
+      "properties": {
+        "mediaType": {
+          "type": "string",
+          "description": "Layer media type"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Layer size"
+        },
+        "digest": {
+          "type": "string",
+          "description": "Layer digest"
+        }
+      },
+      "example": {
+        "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+        "size": 2107098,
+        "digest": "sha256:5d20c808ce198565ff70b3ed23a991dd49afac45dece63474b27ce6ed036adc6"
       }
     },
     "ChangeableAttributes": {
@@ -1526,15 +1696,17 @@
     }
   },
   "parameters": {
-    "name": {
-      "name": "name",
-      "in": "path",
-      "description": "Name of the image (including the namespace)",
+    "Url": {
+      "name": "url",
+      "x-ms-client-name": "loginUri",
+      "description": "Registry login URL",
       "required": true,
       "type": "string",
-      "x-ms-parameter-location": "method"
+      "in": "path",
+      "x-ms-skip-url-encoding": true,
+      "x-ms-parameter-location": "client"
     },
-    "reference": {
+    "ImageReference": {
       "name": "reference",
       "in": "path",
       "description": "A tag or a digest, pointing to a specific image",
@@ -1542,7 +1714,15 @@
       "type": "string",
       "x-ms-parameter-location": "method"
     },
-    "digest": {
+    "ManifestReference": {
+      "name": "reference",
+      "in": "path",
+      "description": "Tag or digest of the target manifest",
+      "required": true,
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Digest": {
       "name": "digest",
       "in": "path",
       "description": "Digest of a desired BLOB",
@@ -1566,7 +1746,17 @@
       "type": "string",
       "x-ms-parameter-location": "method"
     },
-    "queryOrderBy": {
+    "RepoValue": {
+      "name": "value",
+      "in": "body",
+      "description": "Repository attribute value",
+      "required": false,
+      "schema": {
+        "$ref": "#/definitions/ChangeableAttributes"
+      },
+      "x-ms-parameter-location": "method"
+    },
+    "QueryOrderBy": {
       "name": "orderby",
       "in": "query",
       "description": "orderby query parameter",
@@ -1574,28 +1764,99 @@
       "type": "string",
       "x-ms-parameter-location": "method"
     },
-    "queryNum": {
+    "QueryNum": {
       "name": "n",
       "in": "query",
       "description": "query parameter for max number of items",
       "required": false,
-      "type": "string",
+      "type": "integer",
       "x-ms-parameter-location": "method"
     },
-    "queryLast": {
+    "QueryLast": {
       "name": "last",
       "in": "query",
-      "description": "query parameter for the last item in previous query",
+      "description": "Query parameter for the last item in previous query. Result set will include values lexically after last.",
       "required": false,
       "type": "string",
       "x-ms-parameter-location": "method"
     },
-    "queryDigest": {
+    "QueryDigest": {
       "name": "digest",
       "in": "query",
       "description": "filter by digest",
       "required": false,
       "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Grant_type": {
+      "name": "grant_type",
+      "description": "Can take a value of access_token_refresh_token, or access_token, or refresh_token",
+      "type": "string",
+      "in": "formData",
+      "required": true,
+      "enum": [
+        "access_token_refresh_token",
+        "access_token",
+        "refresh_token"
+      ],
+      "x-ms-parameter-location": "method"
+    },
+    "Service": {
+      "name": "service",
+      "in": "formData",
+      "required": true,
+      "description": "Indicates the name of your Azure container registry.",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Tenant": {
+      "name": "tenant",
+      "in": "formData",
+      "required": false,
+      "description": "AAD tenant associated to the AAD credentials.",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "Scope": {
+      "name": "scope",
+      "in": "formData",
+      "required": true,
+      "description": "Which is expected to be a valid scope, and can be specified more than once for multiple scope requests. You can obtain this from the Www-Authenticate response header from the challenge.",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "RefreshToken": {
+      "name": "refresh_token",
+      "in": "formData",
+      "required": false,
+      "description": "AAD refresh token, mandatory when grant_type is access_token_refresh_token or refresh_token",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "AccessToken": {
+      "name": "access_token",
+      "in": "formData",
+      "required": false,
+      "description": "AAD access token, mandatory when grant_type is access_token_refresh_token or access_token.",
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "ImageName": {
+      "name": "name",
+      "in": "path",
+      "description": "Name of the image (including the namespace)",
+      "required": true,
+      "type": "string",
+      "x-ms-parameter-location": "method"
+    },
+    "ManifestBody": {
+      "description": "Manifest body, can take v1 or v2 values depending on accept header",
+      "name": "payload",
+      "in": "body",
+      "required": true,
+      "schema": {
+        "$ref": "#/definitions/Manifest"
+      },
       "x-ms-parameter-location": "method"
     }
   }

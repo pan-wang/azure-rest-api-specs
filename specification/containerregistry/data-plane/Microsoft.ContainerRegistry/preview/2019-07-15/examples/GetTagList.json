@@ -1,5 +1,6 @@
 {
   "parameters": {
+    "url": "acrapi.azurecr-test.io",
     "name": "nanoserver"
   },
   "responses": {
@@ -11,7 +12,6 @@
           "4.7.2-20180906-nanoserver-1803"
         ]
       }
-    },
-    "404": {}
+    }
   }
 }

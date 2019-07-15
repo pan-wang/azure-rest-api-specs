@@ -1,5 +1,6 @@
 {
   "parameters": {
+    "url": "acrapi.azurecr-test.io",
     "name": "nanoserver"
   },
   "responses": {
@@ -12,7 +13,6 @@
           "4.7.2-20180814-windowsservercore-1709"
         ]
       }
-    },
-    "404": {}
+    }
   }
 }

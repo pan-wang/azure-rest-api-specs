@@ -1,5 +1,6 @@
 {
   "parameters": {
+    "url": "acrapi.azurecr-test.io",
     "name": "nanoserver"
   },
   "responses": {
@@ -18,7 +19,6 @@
           "listEnabled": true
         }
       }
-    },
-    "404": {}
+    }
   }
 }
