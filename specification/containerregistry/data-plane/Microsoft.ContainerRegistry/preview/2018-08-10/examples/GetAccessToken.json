@@ -2,7 +2,7 @@
   "parameters": {
     "url": "acrapi.azurecr-test.io",
     "service": "someregistry.azurecr.io",
-    "scope": "registry:catalog:*",
+    "scope": "registry:catalog:*"
   },
   "responses": {
     "200": {

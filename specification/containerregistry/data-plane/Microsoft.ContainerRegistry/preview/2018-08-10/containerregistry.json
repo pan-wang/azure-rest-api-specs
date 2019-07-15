@@ -1,9 +1,9 @@
 {
   "swagger": "2.0",
   "info": {
+    "title": "Azure Container Registry",
     "description": "Metadata API definition for the Azure Container Registry runtime",
-    "version": "2018-08-10-preview",
-    "title": "Azure Container Registry"
+    "version": "2018-08-10-preview"
   },
   "x-ms-parameterized-host": {
     "hostTemplate": "{url}",
@@ -102,7 +102,7 @@
         "tags": [
           "Tag"
         ],
-        "description": "Fetch the tags under the repository identified by 'name'",
+        "description": "Fetch the tags under the repository identified by name",
         "x-ms-examples": {
           "List tags": {
             "$ref": "./examples/GetTagList.json"
@@ -186,13 +186,13 @@
         "description": "Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
         "x-ms-examples": {
           "Put manifest": {
-            "$ref": "./examples/PutManifest.json"
+            "$ref": "./examples/CreateManifest.json"
           }
         },
         "consumes": [
           "application/vnd.docker.distribution.manifest.v2+json"
         ],
-        "operationId": "PutManifest",
+        "operationId": "CreateManifest",
         "parameters": [
           {
             "$ref": "#/parameters/ImageName"
@@ -241,9 +241,6 @@
             "$ref": "./examples/DeleteManifest.json"
           }
         },
-        "consumes": [
-          "application/vnd.docker.distribution.manifest.v2+json"
-        ],
         "operationId": "DeleteManifest",
         "parameters": [
           {
@@ -731,7 +728,7 @@
           "RefreshToken"
         ],
         "description": "Exchange AAD tokens for an ACR refresh Token",
-        "operationId": "GetAcrRefreshToken",
+        "operationId": "GetAcrRefreshTokenFromExchange",
         "consumes": [
           "application/x-www-form-urlencoded"
         ],

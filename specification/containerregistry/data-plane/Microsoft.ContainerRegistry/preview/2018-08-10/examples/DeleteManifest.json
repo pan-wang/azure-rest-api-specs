@@ -2,24 +2,9 @@
   "parameters": {
     "url": "acrapi.azurecr-test.io",
     "name": "alpine",
-    "reference": "3.7",
-    "Content-Type": "application/vnd.docker.distribution.manifest.v2+json"
+    "reference": "3.7"
   },
   "responses": {
-    "202": {},
-    "400": {
-      "errors": [
-        {
-          "code": "MANIFEST_BLOB_UNKNOWN",
-          "message": "blob unknown to registry",
-          "detail": "sha256:6d1ef012b5674ad8a127ecfa9b5e6f5178d171b90ee462846974177fd9bdd39f"
-        },
-        {
-          "code": "MANIFEST_BLOB_UNKNOWN",
-          "message": "blob unknown to registry",
-          "detail": "sha256:5d20c808ce198565ff70b3ed23a991dd49afac45dece63474b27ce6ed036adc6"
-        }
-      ]
-    }
+    "202": {}
   }
 }
